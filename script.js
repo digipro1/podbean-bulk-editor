@@ -4,8 +4,8 @@
 // IMPORTANT: Do NOT hardcode your Client ID here in a real public app.
 // We will use Netlify's environment variables for this.
 // For local testing, you can temporarily hardcode it.
-const PODBEAN_CLIENT_ID = 'YOUR_PODBEAN_CLIENT_ID'; // Replace with your actual Client ID
-const REDIRECT_URI = 'http://localhost:8888/callback.html'; // Must match Podbean app settings
+const PODBEAN_CLIENT_ID = '1f0af1b11d24bbb95de32'; // Replace with your actual Client ID
+const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html'; // Must match Podbean app settings
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
