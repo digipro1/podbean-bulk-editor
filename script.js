@@ -1,11 +1,9 @@
-// script.js
+// script.js - Full version with syntax error fixed for testing
 
 // --- Configuration ---
-// IMPORTANT: Do NOT hardcode your Client ID here in a real public app.
-// We will use Netlify's environment variables for this.
-// For local testing, you can temporarily hardcode it.
-const PODBEAN_CLIENT_ID = '1f0af1b11d24bbb95de32'; // Replace with your actual Client ID
-const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html'; // Must match Podbean app settings
+// Using the specific credentials you provided.
+const PODBEAN_CLIENT_ID = '1f0af1b11d24bbb95de32'; 
+const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
@@ -32,12 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add click listener for the login button
     loginButton.addEventListener('click', () => {
-        // Construct the Podbean authorization URL with the corrected scope format
-        const authUrl = `https://api.podbean.com/v1/dialog/oauth?` +
-            `client_id=${PODBEAN_CLIENT_ID}` +
-            `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-            `&response_type=code` +
-            const authUrl = `https://api.podbean.com/v1/dialog/oauth?client_id=<span class="math-inline">\{PODBEAN\_CLIENT\_ID\}&redirect\_uri\=</span>{encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=episode_read episode_write`;
+        // Construct the Podbean authorization URL.
+        // This version has the duplicate line removed to fix the syntax error.
+        // We are still testing with ONLY the 'episode_read' scope.
+        const authUrl = `https://api.podbean.com/v1/dialog/oauth?client_id=${PODBEAN_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=episode_read`;
+
         // Redirect the user to Podbean
         window.location.href = authUrl;
     });
