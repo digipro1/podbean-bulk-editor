@@ -1,20 +1,25 @@
-// functions/auth-callback.js
+// functions/auth-callback.js - Enhanced Error Reporting
 
-// We use 'node-fetch' for making HTTP requests in a Node.js environment.
-// You'll need to install it by running: npm install node-fetch
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-    // Get the temporary code from the query string
     const { code } = event.queryStringParameters;
 
-    // Retrieve your Client ID and Secret from environment variables
-    // These are set in the Netlify UI for security
+    // --- Retrieve credentials from Netlify's secure environment variables ---
     const CLIENT_ID = process.env.PODBEAN_CLIENT_ID;
     const CLIENT_SECRET = process.env.PODBEAN_CLIENT_SECRET;
-    const REDIRECT_URI = process.env.VITE_REDIRECT_URI || 'http://localhost:8888/callback.html'; // Use live URI in production
+    
+    // This must EXACTLY match the URI in your Podbean app settings and script.js
+    const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
 
-    // Prepare the request to Podbean's token endpoint
+    // Check if the environment variables were loaded correctly
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Server configuration error: Client ID or Secret is missing.' })
+        };
+    }
+
     const tokenUrl = 'https://api.podbean.com/oauth/token';
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -31,11 +36,14 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
 
-        // If there's an error, return it
+        // If Podbean returns an error (like "invalid_client"), show it
         if (!response.ok) {
             return {
                 statusCode: response.status,
-                body: JSON.stringify({ error: data.error_description || 'Failed to get token.' })
+                body: JSON.stringify({ 
+                    error: `Error from Podbean: ${data.error || 'Unknown error.'}`,
+                    error_description: data.error_description 
+                })
             };
         }
 
@@ -46,9 +54,15 @@ exports.handler = async function(event, context) {
         };
 
     } catch (error) {
+        // --- ENHANCED CATCH BLOCK ---
+        // This will now report the actual system error message.
+        console.error('An unexpected error occurred:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'An internal server error occurred.' })
+            body: JSON.stringify({ 
+                error: 'An unexpected internal server error occurred.',
+                details: error.message 
+            })
         };
     }
 };
