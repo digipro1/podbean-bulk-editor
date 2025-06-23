@@ -37,8 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `client_id=${PODBEAN_CLIENT_ID}` +
             `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
             `&response_type=code` +
-            `&scope=episode_read episode_write`; // CORRECT: Scopes are separated by a space
-
+            const authUrl = `https://api.podbean.com/v1/dialog/oauth?client_id=<span class="math-inline">\{PODBEAN\_CLIENT\_ID\}&redirect\_uri\=</span>{encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=episode_read episode_write`;
         // Redirect the user to Podbean
         window.location.href = authUrl;
     });
