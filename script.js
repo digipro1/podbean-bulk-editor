@@ -17,20 +17,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (accessToken) {
         // If we have a token, show the editor and hide the login button
-        console.log('Already logged in.');
+        console.log('Successfully logged in. Access Token is available.');
         loginContainer.style.display = 'none';
         editorContainer.style.display = 'block';
-        // We will fetch episodes here in the next step
+        
+        // --- NEXT STEP ---
+        // We will add the function to fetch your episodes right here.
+        
+    } else {
+        // If there's no token, ensure the login view is shown
+        loginContainer.style.display = 'block';
+        editorContainer.style.display = 'none';
     }
 
     // Add click listener for the login button
     loginButton.addEventListener('click', () => {
-        // Construct the Podbean authorization URL
+        // Construct the Podbean authorization URL with the corrected scope format
         const authUrl = `https://api.podbean.com/v1/dialog/oauth?` +
             `client_id=${PODBEAN_CLIENT_ID}` +
             `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
             `&response_type=code` +
-            `&scope=episode_read,episode_write`; // Scopes define permissions
+            `&scope=episode_read episode_write`; // CORRECT: Scopes are separated by a space
 
         // Redirect the user to Podbean
         window.location.href = authUrl;
