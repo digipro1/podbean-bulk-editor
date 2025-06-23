@@ -12,8 +12,14 @@
         window.onload = async () => {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
+            const error = params.get('error');
+            const errorDescription = params.get('error_description');
 
-            if (code) {
+            // First, check if Podbean sent back an error
+            if (error) {
+                document.body.innerText = `Error from Podbean: ${error} - ${errorDescription || 'No description provided.'}`;
+            } else if (code) {
+                // If there's a code, proceed as normal
                 try {
                     // Call our secure Netlify Function, passing the code
                     const response = await fetch(`/api/auth-callback?code=${code}`);
@@ -30,11 +36,12 @@
                         // Handle errors from our function
                         document.body.innerText = 'Error: ' + (data.error || 'Could not retrieve access token.');
                     }
-                } catch (error) {
-                    document.body.innerText = 'Error fetching token: ' + error.message;
+                } catch (e) {
+                    document.body.innerText = 'Error fetching token: ' + e.message;
                 }
             } else {
-                document.body.innerText = 'Error: No authorization code provided.';
+                // This is the original error if no code and no error is found
+                document.body.innerText = 'Error: No authorization code was found in the URL.';
             }
         };
     </script>
