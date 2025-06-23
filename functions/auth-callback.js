@@ -1,62 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Authorizing...</title>
-    <style>
-        body { font-family: sans-serif; padding: 2em; line-height: 1.5; }
-        code { background-color: #eee; padding: 0.2em 0.4em; border-radius: 3px; }
-    </style>
-</head>
-<body>
-    <p>Please wait, authorizing...</p>
+// functions/auth-callback.js - Final Debugging Version
 
-    <script>
-        // This script runs as soon as the page loads
-        window.onload = async () => {
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get('code');
-            const podbeanError = params.get('error');
-            const podbeanErrorDescription = params.get('error_description');
+const fetch = require('node-fetch');
 
-            // First, check if Podbean sent back an error directly in the URL
-            if (podbeanError) {
-                document.body.innerHTML = `<h2>Error from Podbean</h2><p><b>Error:</b> ${podbeanError}</p><p><b>Description:</b> ${podbeanErrorDescription || 'No description provided.'}</p>`;
-                return; // Stop execution
-            }
+exports.handler = async function(event, context) {
+    console.log("Auth function started.");
+    const { code } = event.queryStringParameters;
 
-            if (code) {
-                // If there's a code, try to get the token
-                try {
-                    const response = await fetch(`/api/auth-callback?code=${code}`);
-                    const data = await response.json();
+    if (!code) {
+        console.log("Error: No authorization code provided in the request.");
+        return { statusCode: 400, body: JSON.stringify({ error: "No authorization code from client." }) };
+    }
 
-                    if (data.access_token) {
-                        // Success!
-                        localStorage.setItem('podbean_access_token', data.access_token);
-                        localStorage.setItem('podbean_token_expires_in', data.expires_in);
-                        window.location.href = '/'; // Redirect to main page
-                    } else {
-                        // --- ENHANCED ERROR DISPLAY ---
-                        // This now handles the more detailed errors from our function
-                        let errorMessage = `<h2>Error from Application Server</h2>`;
-                        errorMessage += `<p><b>Error:</b> ${data.error || 'Could not retrieve access token.'}</p>`;
-                        if (data.details) {
-                           errorMessage += `<p><b>Details:</b> ${data.details}</p>`;
-                        }
-                         if (data.error_description) {
-                           errorMessage += `<p><b>Podbean Details:</b> ${data.error_description}</p>`;
-                        }
-                        document.body.innerHTML = errorMessage;
-                    }
-                } catch (e) {
-                    document.body.innerHTML = `<h2>Fetch Error</h2><p>Could not contact the application server.</p><p><b>Details:</b> ${e.message}</p>`;
-                }
-            } else {
-                // This is the original error if no code and no error is found
-                document.body.innerHTML = `<h2>Authorization Error</h2><p>No authorization code was found in the URL. Please try logging in again.</p>`;
-            }
+    const CLIENT_ID = process.env.PODBEAN_CLIENT_ID;
+    const CLIENT_SECRET = process.env.PODBEAN_CLIENT_SECRET;
+    const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
+
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+        console.error("Server configuration error: Client ID or Secret is missing from environment variables.");
+        return { statusCode: 500, body: JSON.stringify({ error: 'Server configuration error: Client ID or Secret is missing.' }) };
+    }
+    
+    console.log("Attempting to trade code for a token with Podbean.");
+    const tokenUrl = 'https://api.podbean.com/oauth/token';
+    const params = new URLSearchParams();
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('client_id', CLIENT_ID);
+    params.append('client_secret', CLIENT_SECRET);
+    params.append('redirect_uri', REDIRECT_URI);
+
+    try {
+        const response = await fetch(tokenUrl, {
+            method: 'POST',
+            body: params
+        });
+
+        const responseText = await response.text(); // Get the raw text first
+        console.log("Raw response from Podbean:", responseText);
+        const data = JSON.parse(responseText); // Now try to parse it
+
+        if (!response.ok) {
+            console.error("Podbean API returned an error.", data);
+            return {
+                statusCode: response.status,
+                body: JSON.stringify({
+                    error: `Error from Podbean: ${data.error || 'Unknown error.'}`,
+                    details: data
+                })
+            };
+        }
+
+        console.log("Successfully received data from Podbean:", data);
+        return {
+            statusCode: 200,
+            body: JSON.stringify(data) // Send the full response to the frontend
         };
-    </script>
-</body>
-</html>
+
+    } catch (error) {
+        console.error("A critical error occurred in the function:", error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ 
+                error: 'A critical internal error occurred.',
+                details: error.message 
+            })
+        };
+    }
+};
