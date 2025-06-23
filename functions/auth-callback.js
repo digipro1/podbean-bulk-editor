@@ -1,9 +1,9 @@
-// functions/auth-callback.js - Enhanced Logging Version
+// functions/auth-callback.js - Final Experiment Version
 
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-    console.log("--- Auth function started ---");
+    console.log("--- Auth function started (Final Experiment) ---");
     const { code } = event.queryStringParameters;
 
     if (!code) {
@@ -12,7 +12,9 @@ exports.handler = async function(event, context) {
 
     const CLIENT_ID = process.env.PODBEAN_CLIENT_ID;
     const CLIENT_SECRET = process.env.PODBEAN_CLIENT_SECRET;
-    const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
+    
+    // NOTE: The redirect_uri is intentionally NOT sent in the token request below as a test.
+    // const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
 
     if (!CLIENT_ID || !CLIENT_SECRET) {
         console.error("CRITICAL: Server configuration error: Client ID or Secret is missing from environment variables.");
@@ -25,17 +27,7 @@ exports.handler = async function(event, context) {
     params.append('code', code);
     params.append('client_id', CLIENT_ID);
     params.append('client_secret', CLIENT_SECRET);
-    params.append('redirect_uri', REDIRECT_URI);
-
-    // --- NEW LOGGING ---
-    // Log the parameters we are about to send (NEVER log the secret)
-    console.log("Sending request to Podbean with the following parameters:");
-    console.log(`- grant_type: authorization_code`);
-    console.log(`- client_id: ${CLIENT_ID}`);
-    console.log(`- redirect_uri: ${REDIRECT_URI}`);
-    console.log(`- code: [present]`);
-    console.log(`- client_secret: [present]`);
-    // --- END NEW LOGGING ---
+    // params.append('redirect_uri', REDIRECT_URI); // <-- THIS LINE IS INTENTIONALLY REMOVED FOR THE TEST
 
     try {
         const response = await fetch(tokenUrl, {
@@ -44,8 +36,6 @@ exports.handler = async function(event, context) {
         });
 
         const responseText = await response.text();
-        console.log("Raw response text from Podbean:", responseText.substring(0, 200) + '...'); // Log first 200 chars
-
         const data = JSON.parse(responseText); 
 
         if (!response.ok) {
