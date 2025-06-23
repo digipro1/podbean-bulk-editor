@@ -3,45 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <title>Authorizing...</title>
+    <style>
+        body { font-family: monospace; white-space: pre-wrap; word-break: break-all; padding: 1em; }
+    </style>
 </head>
 <body>
-    <p>Please wait, authorizing...</p>
-
+    <p>Fetching token...</p>
     <script>
-        // This script runs as soon as the page loads
         window.onload = async () => {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
-            const error = params.get('error');
-            const errorDescription = params.get('error_description');
+            const podbeanError = params.get('error');
 
-            // First, check if Podbean sent back an error
-            if (error) {
-                document.body.innerText = `Error from Podbean: ${error} - ${errorDescription || 'No description provided.'}`;
-            } else if (code) {
-                // If there's a code, proceed as normal
+            if (podbeanError) {
+                document.body.textContent = `Error from Podbean redirect: ${window.location.search}`;
+                return;
+            }
+
+            if (code) {
                 try {
-                    // Call our secure Netlify Function, passing the code
                     const response = await fetch(`/api/auth-callback?code=${code}`);
-                    const data = await response.json();
+                    const responseText = await response.text();
 
+                    // --- THE MOST IMPORTANT PART ---
+                    // Display the raw text response from our server function
+                    document.body.textContent = `--- Raw Server Response ---\n\nStatus: ${response.status}\n\nBody:\n${responseText}`;
+
+                    // Also try to parse it and save the token if it exists
+                    const data = JSON.parse(responseText);
                     if (data.access_token) {
-                        // Success! Save the token in the browser's local storage
-                        localStorage.setItem('podbean_access_token', data.access_token);
-                        localStorage.setItem('podbean_token_expires_in', data.expires_in);
-
-                        // Redirect back to the main page
-                        window.location.href = '/';
-                    } else {
-                        // Handle errors from our function
-                        document.body.innerText = 'Error: ' + (data.error || 'Could not retrieve access token.');
+                         localStorage.setItem('podbean_access_token', data.access_token);
+                         // Optional: redirect on success after a delay
+                         // setTimeout(() => window.location.href = '/', 2000);
                     }
+
                 } catch (e) {
-                    document.body.innerText = 'Error fetching token: ' + e.message;
+                    document.body.textContent = `--- CRITICAL FETCH ERROR ---\n\n${e.toString()}`;
                 }
             } else {
-                // This is the original error if no code and no error is found
-                document.body.innerText = 'Error: No authorization code was found in the URL.';
+                document.body.textContent = "--- ERROR ---\n\nNo authorization code found in URL.";
             }
         };
     </script>
