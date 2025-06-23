@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authorizing...</title>
+</head>
+<body>
+    <p>Please wait, authorizing...</p>
+
+    <script>
+        // This script runs as soon as the page loads
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+
+            if (code) {
+                try {
+                    // Call our secure Netlify Function, passing the code
+                    const response = await fetch(`/api/auth-callback?code=${code}`);
+                    const data = await response.json();
+
+                    if (data.access_token) {
+                        // Success! Save the token in the browser's local storage
+                        localStorage.setItem('podbean_access_token', data.access_token);
+                        localStorage.setItem('podbean_token_expires_in', data.expires_in);
+
+                        // Redirect back to the main page
+                        window.location.href = '/';
+                    } else {
+                        // Handle errors from our function
+                        document.body.innerText = 'Error: ' + (data.error || 'Could not retrieve access token.');
+                    }
+                } catch (error) {
+                    document.body.innerText = 'Error fetching token: ' + error.message;
+                }
+            } else {
+                document.body.innerText = 'Error: No authorization code provided.';
+            }
+        };
+    </script>
+</body>
+</html>
