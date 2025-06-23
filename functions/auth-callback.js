@@ -1,4 +1,4 @@
-// functions/auth-callback.js - Final Correct Version
+// functions/auth-callback.js - With Explicit Headers
 
 const fetch = require('node-fetch');
 
@@ -28,6 +28,11 @@ exports.handler = async function(event, context) {
     try {
         const response = await fetch(tokenUrl, {
             method: 'POST',
+            // --- NEW --- Explicitly setting headers
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
             body: params
         });
 
@@ -41,6 +46,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, body: JSON.stringify(data) };
 
     } catch (error) {
+        // This catch block will be hit if response.json() fails, like it has been
         return { statusCode: 500, body: JSON.stringify({ error: 'A critical internal error occurred.', details: error.message })};
     }
 };
