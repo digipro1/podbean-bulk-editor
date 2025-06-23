@@ -2,7 +2,7 @@
 
 // --- Configuration ---
 // Using the specific credentials you provided.
-const PODBEAN_CLIENT_ID = '1f0af1b11d24bbb95de32'; 
+const PODBEAN_CLIENT_ID = '52f62255757569c0f02ab'; 
 const REDIRECT_URI = 'https://podbean-bulk-editor.netlify.app/callback.html';
 
 document.addEventListener('DOMContentLoaded', () => {
