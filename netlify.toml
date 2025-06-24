@@ -4,8 +4,7 @@
   # This tells Netlify where our serverless function code is located.
   functions = "functions/"
 
-# This rule makes our serverless function available at a clean URL.
-# It proxies requests from /api/* to the correct function path.
+# This rule makes our new serverless function available at a clean URL.
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
