@@ -4,19 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podbean Bulk Editor</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- We will create style.css later -->
+    <!-- <link rel="stylesheet" href="style.css"> -->
 </head>
 <body>
     <header>
         <h1>Podbean Bulk Editor</h1>
     </header>
     <main>
-        <div id="login-container">
-            <button id="login-button">Login with Podbean</button>
+        <div id="status-container">
+            <p id="status-message">Initializing...</p>
         </div>
         <div id="editor-container" style="display: none;">
+            <!-- We will build the editor UI here in the next step -->
             <h2>Your Episodes</h2>
-            <p>Editor will go here...</p>
+            <div id="episode-list"></div>
         </div>
     </main>
     <script src="script.js"></script>
