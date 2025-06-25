@@ -1,16 +1,16 @@
-// functions/get-episodes.js
-
+// functions/get-episodes.js (Secured)
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-    // Get parameters from the request URL
+    const { user } = context.clientContext;
+    if (!user) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'You must be logged in to perform this action.' }) };
+    }
+
     const { access_token, offset, limit } = event.queryStringParameters;
 
     if (!access_token) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'Access token is required.' })
-        };
+        return { statusCode: 400, body: JSON.stringify({ error: 'Access token is required.' }) };
     }
 
     const podbeanApiUrl = `https://api.podbean.com/v1/episodes?access_token=${access_token}&offset=${offset || 0}&limit=${limit || 100}`;
@@ -20,11 +20,9 @@ exports.handler = async function(event, context) {
         const data = await response.json();
 
         if (!response.ok) {
-            // Forward the error from Podbean
             return { statusCode: response.status, body: JSON.stringify(data) };
         }
 
-        // Forward the successful response from Podbean
         return { statusCode: 200, body: JSON.stringify(data) };
 
     } catch (error) {
