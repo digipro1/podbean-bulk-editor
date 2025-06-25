@@ -1,4 +1,4 @@
-/* style.css - Editable Grid Theme */
+/* style.css - Editable Grid Theme with Data Types */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
@@ -12,9 +12,10 @@
     --editable-bg: #E3F2FD;
     --success-green: #28a745;
     --disabled-gray: #B0BEC5;
+    --pending-yellow: #fffbe6; /* For rows with unsaved changes */
 }
 
-body {
+body, html {
     font-family: 'Montserrat', sans-serif;
     margin: 0;
     background-color: var(--bg-color);
@@ -36,7 +37,7 @@ header h1 {
 }
 
 main {
-    max-width: 1400px; /* Wider for more columns */
+    max-width: 1600px; /* Even wider for better spacing */
     margin: 2rem auto;
     padding: 2rem;
     background-color: #fff;
@@ -46,14 +47,12 @@ main {
 
 #status-container { text-align: center; padding: 2rem; }
 
-/* New Actions Bar Styles */
 #actions-container {
     display: flex;
-    justify-content: flex-end; /* Pushes button to the right */
-    padding: 1rem 1.5rem;
-    background-color: #f1f3f5;
-    border-radius: 8px;
+    justify-content: flex-end;
+    padding: 1rem 0;
     margin-bottom: 2rem;
+    border-bottom: 2px solid #f1f3f5;
 }
 
 button {
@@ -80,32 +79,43 @@ button:disabled { background-color: var(--disabled-gray); color: white; cursor: 
 }
 .save-btn-individual:hover { background-color: #0056A0; }
 
-/* Table Styles */
 #table-container { overflow-x: auto; }
 .episode-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 1rem;
     font-size: 0.9em;
 }
 .episode-table th, .episode-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 .episode-table th { background-color: #F1F3F5; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 1rem 0.5rem; }
 
-/* Editable Cell Styles */
-td[contenteditable="true"] {
-    background-color: var(--editable-bg);
-    outline-color: var(--accent-blue);
-    padding: 0.75rem;
+/* Visual indicator for a row with pending changes */
+.episode-table tr.changed-row {
+    background-color: var(--pending-yellow) !important;
 }
-td[contenteditable="true"]:focus {
-    box-shadow: inset 0 0 0 2px var(--accent-blue);
-    background-color: var(--light-text);
+
+/* Common style for all input types in the table */
+.editable-input, .editable-select, .editable-textarea {
+    width: 95%;
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font: inherit;
+    background-color: #fff;
+    transition: box-shadow 0.2s;
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+.editable-input:focus, .editable-select:focus, .editable-textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-blue);
+}
+
+.editable-textarea {
+    resize: vertical;
 }
 
 /* Quill Editor Specific Styles */
-.quill-editor-container { border: 2px solid var(--editable-bg); border-radius: 4px; }
+.quill-editor-container { border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
 .quill-editor-container .ql-container { border: none !important; font: inherit !important; }
 .quill-editor-container .ql-editor { padding: 8px !important; min-height: 50px; }
-.quill-editor-container:focus-within { border-color: var(--accent-blue); background-color: #fff; }
-.quill-editor-container .ql-toolbar { display: none; }
-.quill-editor-container:focus-within .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
+.quill-editor-container:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px var(--accent-blue); }
+.quill-editor-container .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
