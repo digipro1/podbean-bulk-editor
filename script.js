@@ -1,4 +1,4 @@
-// script.js - Client Credentials Flow with Episode Fetching
+// script.js - Client Credentials Flow with Episode Fetching (via Proxy)
 
 document.addEventListener('DOMContentLoaded', () => {
     // This function runs as soon as the page is loaded
@@ -12,7 +12,6 @@ async function initializeApp() {
     try {
         statusMessage.textContent = 'Authenticating...';
         
-        // 1. Call our new backend function to get a token
         const response = await fetch('/api/get-token');
         const tokenData = await response.json();
 
@@ -21,13 +20,12 @@ async function initializeApp() {
         }
 
         const accessToken = tokenData.access_token;
+        window.podbeanAccessToken = accessToken; // Store token globally
 
         statusMessage.textContent = 'Authentication successful. Fetching episodes...';
         
-        // 3. Call the function to fetch and display the episodes
-        await fetchEpisodes(accessToken);
+        await fetchEpisodes(); // No need to pass token here anymore
 
-        // Show the editor and hide the status message
         editorContainer.style.display = 'block';
         statusMessage.style.display = 'none';
 
@@ -39,17 +37,18 @@ async function initializeApp() {
 }
 
 /**
- * Fetches all episodes from the Podbean API, handling pagination.
- * @param {string} accessToken - The access token for API calls.
+ * Fetches all episodes by calling our proxy function.
  */
-async function fetchEpisodes(accessToken) {
+async function fetchEpisodes() {
     const allEpisodes = [];
     let offset = 0;
-    const limit = 100; // Max episodes per request
+    const limit = 100;
     let hasMore = true;
 
     while(hasMore) {
-        const response = await fetch(`https://api.podbean.com/v1/episodes?access_token=${accessToken}&offset=${offset}&limit=${limit}`);
+        // --- THIS IS THE KEY CHANGE ---
+        // Call our own backend proxy instead of Podbean directly.
+        const response = await fetch(`/api/get-episodes?access_token=${window.podbeanAccessToken}&offset=${offset}&limit=${limit}`);
         
         if (!response.ok) {
             const errorData = await response.json();
@@ -76,7 +75,6 @@ async function fetchEpisodes(accessToken) {
 function renderEpisodes(episodes) {
     const episodeListDiv = document.getElementById('episode-list');
     
-    // Clear any previous content
     episodeListDiv.innerHTML = '';
 
     if (episodes.length === 0) {
@@ -85,9 +83,8 @@ function renderEpisodes(episodes) {
     }
 
     const table = document.createElement('table');
-    table.className = 'episode-table'; // For future styling
+    table.className = 'episode-table';
 
-    // Create table header
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
     const headers = ['Title', 'Status', 'Published Date'];
@@ -97,22 +94,17 @@ function renderEpisodes(episodes) {
         headerRow.appendChild(th);
     });
 
-    // Create table body
     const tbody = table.createTBody();
     episodes.forEach(episode => {
         const row = tbody.insertRow();
         
-        // Title cell
         const titleCell = row.insertCell();
         titleCell.textContent = episode.title;
 
-        // Status cell
         const statusCell = row.insertCell();
         statusCell.textContent = episode.status;
 
-        // Published Date cell
         const dateCell = row.insertCell();
-        // The publish_time is a Unix timestamp, so we multiply by 1000 for JavaScript
         const publishDate = new Date(episode.publish_time * 1000);
         dateCell.textContent = publishDate.toLocaleDateString('en-US', {
             year: 'numeric',
