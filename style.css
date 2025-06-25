@@ -22,7 +22,7 @@ h1 {
 }
 
 main {
-    max-width: 900px;
+    max-width: 1200px; /* Wider layout for more columns */
     margin: 0 auto;
     background-color: #ffffff;
     padding: 2rem;
@@ -58,16 +58,17 @@ label {
     color: #555;
 }
 
-input[type="text"] {
+input[type="text"], select {
     padding: 0.75rem;
     border: 1px solid #ccc;
     border-radius: 6px;
     font-size: 1rem;
     width: 250px;
     transition: border-color 0.2s;
+    background-color: #fff;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus, select:focus {
     outline: none;
     border-color: #3498db;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
@@ -87,65 +88,77 @@ button:active {
     transform: translateY(1px);
 }
 
-#preview-btn {
-    background-color: #3498db;
-    color: white;
-}
+#preview-btn { background-color: #3498db; color: white; }
+#preview-btn:hover { background-color: #2980b9; }
 
-#preview-btn:hover {
-    background-color: #2980b9;
-}
-
-#save-btn {
-    background-color: #2ecc71;
-    color: white;
-    margin-left: auto; /* Pushes the save button to the right */
-}
-
-#save-btn:hover {
-    background-color: #27ae60;
-}
-
-#save-btn:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
-}
+#save-btn { background-color: #2ecc71; color: white; margin-left: auto; }
+#save-btn:hover { background-color: #27ae60; }
+#save-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
 
 .episode-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 1rem;
+    table-layout: fixed; /* Important for editable fields */
+    font-size: 0.95em;
 }
 
 .episode-table th, .episode-table td {
-    padding: 0.8rem 1rem;
+    padding: 0.5rem; /* Reduced padding for compact view */
     text-align: left;
     border-bottom: 1px solid #e0e6ed;
+    vertical-align: top; /* Align content to the top */
 }
 
-.episode-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
+.episode-table th { background-color: #f8f9fa; font-weight: 600; padding: 0.8rem 0.5rem;}
+.episode-table tbody tr:hover { background-color: #f1f5f8; }
+
+/* Styles for editable fields within the table */
+.episode-table .editable-input {
+    width: 95%;
+    padding: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font: inherit;
+    background-color: transparent;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.episode-table .editable-input:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: #3498db;
+}
+.episode-table .editable-input.pending {
+    background-color: #fffbe6; /* Light yellow for pending changes */
 }
 
-.episode-table tbody tr:hover {
-    background-color: #f1f5f8;
+/* Styles for Quill Rich Text Editor */
+.quill-editor-container {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    transition: border-color 0.2s, background-color 0.2s;
 }
-
-/* For previewing changes */
-.pending-change {
-    background-color: #fffbe6; /* Light yellow */
+.quill-editor-container.pending {
+    background-color: #fffbe6;
 }
-
-.pending-change .original-text {
-    text-decoration: line-through;
-    color: #e74c3c;
-    opacity: 0.8;
-    font-size: 0.9em;
-    margin-right: 0.5em;
+.quill-editor-container .ql-toolbar {
+    display: none; /* Hide toolbar by default */
+    border-bottom: 1px solid #ccc !important;
+    padding: 4px !important;
 }
-
-.pending-change .new-text {
-    color: #27ae60;
-    font-weight: bold;
+.quill-editor-container .ql-container {
+    border: none !important;
+    font: inherit !important;
+}
+.quill-editor-container .ql-editor {
+    padding: 8px !important;
+    min-height: 50px;
+}
+/* Show toolbar and border when the container is focused */
+.quill-editor-container.focused {
+    border-color: #3498db;
+    background-color: #fff;
+}
+.quill-editor-container.focused .ql-toolbar {
+    display: block; /* Show toolbar on focus */
 }
