@@ -2,13 +2,12 @@
 
 // --- Global State ---
 let allEpisodes = [];
-// Use an object for easier lookup by ID. E.g., { "episodeId123": { title: "New Title" } }
-let pendingChanges = {}; 
-let quillInstances = {}; // To store instances of the rich text editor
+let pendingChanges = {}; // E.g., { "episodeId123": { title: "New Title", hasChanged: true } }
+let quillInstances = {}; 
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
-    document.getElementById('preview-btn').addEventListener('click', previewChanges);
+    document.getElementById('save-all-btn').addEventListener('click', handleSaveAll);
 });
 
 async function initializeApp() {
@@ -42,123 +41,154 @@ async function fetchEpisodes() {
         if (data.episodes && data.episodes.length > 0) { fetchedEpisodes.push(...data.episodes); offset += data.episodes.length; } else { hasMore = false; }
     }
     allEpisodes = fetchedEpisodes;
+    pendingChanges = {}; // Reset changes on fetch
+    document.getElementById('save-all-btn').disabled = true;
     renderEpisodes(allEpisodes);
 }
 
-/**
- * Renders an editable grid for all episodes.
- * @param {Array} episodes - The array of episode objects.
- */
 function renderEpisodes(episodes) {
-    const episodeListDiv = document.getElementById('episode-list');
-    episodeListDiv.innerHTML = '';
-    quillInstances = {}; // Clear old instances
+    const tableContainer = document.getElementById('table-container');
+    tableContainer.innerHTML = '';
+    quillInstances = {}; 
 
-    if (episodes.length === 0) { episodeListDiv.textContent = 'No episodes found.'; return; }
+    if (episodes.length === 0) { tableContainer.textContent = 'No episodes found.'; return; }
 
     const table = document.createElement('table');
     table.className = 'episode-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    const headers = ['Title', 'Description', 'Season', 'Episode', 'Type', 'Summary', 'Author'];
+    const headers = ['Title', 'Description', 'Season', 'Episode', 'Type', 'Summary', 'Author', 'Action'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
-        th.style.width = text === 'Description' ? '35%' : 'auto';
+        if (text === 'Description') th.style.width = '30%';
         headerRow.appendChild(th);
     });
 
     const tbody = table.createTBody();
     episodes.forEach(episode => {
         const row = tbody.insertRow();
-        const epChanges = pendingChanges[episode.id] || {};
+        row.dataset.episodeId = episode.id;
 
-        // Helper to create a standard input cell
-        const createInputCell = (value, fieldName) => {
+        // --- Create Editable Cells ---
+        const createEditableCell = (value, fieldName) => {
             const cell = row.insertCell();
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'editable-input';
-            input.value = epChanges[fieldName] !== undefined ? epChanges[fieldName] : (value || '');
-            input.dataset.episodeId = episode.id;
-            input.dataset.field = fieldName;
-            if (epChanges[fieldName] !== undefined) input.classList.add('pending');
-            cell.appendChild(input);
+            cell.textContent = value || '';
+            cell.contentEditable = true;
+            cell.dataset.field = fieldName;
+            cell.addEventListener('input', () => trackChange(episode.id, fieldName, cell.textContent));
+            return cell;
         };
         
-        // --- Create Cells for Each Column ---
-        createInputCell(episode.title, 'title');
-        
-        // Description (Rich Text)
+        createEditableCell(episode.title, 'title');
+
+        // Description (Rich Text with Quill.js)
         const descCell = row.insertCell();
         const editorContainer = document.createElement('div');
         editorContainer.className = 'quill-editor-container';
         const editorEl = document.createElement('div');
         editorContainer.appendChild(editorEl);
         descCell.appendChild(editorContainer);
-        
-        const quill = new Quill(editorEl, {
-            theme: 'snow',
-            modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] }
-        });
-        // Podbean uses 'content' for the description
-        quill.root.innerHTML = epChanges.content !== undefined ? epChanges.content : (episode.content || '');
-        quillInstances[episode.id] = quill; // Store instance for later
-        
-        if (epChanges.content !== undefined) editorContainer.classList.add('pending');
-        
-        quill.on('editor-change', () => {
-             editorContainer.classList.toggle('focused', quill.hasFocus());
-        });
+        const quill = new Quill(editorEl, { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] } });
+        quill.root.innerHTML = episode.content || '';
+        quillInstances[episode.id] = quill;
+        quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
 
-        // Season No., Episode No., Episode Type
-        createInputCell(episode.season_no, 'season_no');
-        createInputCell(episode.episode_no, 'episode_no');
-        createInputCell(episode.episode_type, 'episode_type');
-        createInputCell(episode.summary, 'summary');
-        createInputCell(episode.author, 'author');
+        // Other text fields
+        createEditableCell(episode.season_no, 'season_no');
+        createEditableCell(episode.episode_no, 'episode_no');
+        createEditableCell(episode.episode_type, 'episode_type');
+        createEditableCell(episode.summary, 'summary');
+        createEditableCell(episode.author, 'author');
+
+        // Action Cell with individual Save Button
+        const actionCell = row.insertCell();
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.className = 'save-btn-individual';
+        saveBtn.onclick = () => handleIndividualSave(episode.id);
+        actionCell.appendChild(saveBtn);
     });
 
-    episodeListDiv.appendChild(table);
+    tableContainer.appendChild(table);
 }
 
-function previewChanges() {
-    const fieldToEdit = document.getElementById('field-select').value;
-    const findText = document.getElementById('find-input').value;
-    const replaceText = document.getElementById('replace-input').value;
-    const saveBtn = document.getElementById('save-btn');
+function trackChange(episodeId, field, value) {
+    if (!pendingChanges[episodeId]) {
+        pendingChanges[episodeId] = {};
+    }
+    pendingChanges[episodeId][field] = value;
+    document.getElementById('save-all-btn').disabled = false;
+}
 
-    if (!findText) { alert('Please enter text to find.'); return; }
-    
-    let changesMade = false;
-    pendingChanges = {}; // Reset changes for a new preview
-
-    allEpisodes.forEach(episode => {
-        // Handle both simple text fields and the Quill editor's content
-        let originalText = '';
-        if (fieldToEdit === 'content') {
-            const quill = quillInstances[episode.id];
-            originalText = quill ? quill.getText() : (episode.content || '');
-        } else {
-            originalText = episode[fieldToEdit] || '';
-        }
-
-        if (originalText.includes(findText)) {
-            changesMade = true;
-            const newText = originalText.replaceAll(findText, replaceText);
-
-            pendingChanges[episode.id] = {
-                ...pendingChanges[episode.id], // Keep other potential manual changes
-                [fieldToEdit]: newText
-            };
-        }
-    });
-
-    saveBtn.disabled = !changesMade;
-    if (!changesMade) {
-        alert('No episodes found with that text in the selected field.');
+async function handleIndividualSave(episodeId) {
+    const changes = pendingChanges[episodeId];
+    if (!changes) {
+        alert('No changes to save for this episode.');
+        return;
     }
     
-    // Re-render the entire grid to show highlights and new values
-    renderEpisodes(allEpisodes);
+    const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
+    const saveButton = row.querySelector('.save-btn-individual');
+    saveButton.textContent = 'Saving...';
+    saveButton.disabled = true;
+
+    try {
+        const response = await fetch('/api/update-episode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ episodeId, updates: changes, accessToken: window.podbeanAccessToken }),
+        });
+        if (!response.ok) throw new Error((await response.json()).error_description || 'Save failed');
+        
+        saveButton.textContent = 'Saved!';
+        delete pendingChanges[episodeId]; // Clear changes for this episode
+        setTimeout(() => { saveButton.textContent = 'Save'; saveButton.disabled = false; }, 2000);
+        
+        if (Object.keys(pendingChanges).length === 0) {
+            document.getElementById('save-all-btn').disabled = true;
+        }
+
+    } catch (error) {
+        alert(`Error saving episode: ${error.message}`);
+        saveButton.textContent = 'Retry';
+        saveButton.disabled = false;
+    }
+}
+
+async function handleSaveAll() {
+    const saveAllBtn = document.getElementById('save-all-btn');
+    const changedEpisodeIds = Object.keys(pendingChanges);
+
+    if (changedEpisodeIds.length === 0) {
+        alert('No changes to save.');
+        return;
+    }
+
+    saveAllBtn.textContent = 'Saving All...';
+    saveAllBtn.disabled = true;
+    let successCount = 0;
+    const totalChanges = changedEpisodeIds.length;
+
+    for (let i = 0; i < totalChanges; i++) {
+        const episodeId = changedEpisodeIds[i];
+        const updates = pendingChanges[episodeId];
+        saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
+
+        try {
+            const response = await fetch('/api/update-episode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ episodeId, updates, accessToken: window.podbeanAccessToken }),
+            });
+            if (response.ok) successCount++;
+        } catch (error) {
+            console.error(`Failed to save episode ${episodeId}:`, error);
+        }
+    }
+    
+    alert(`Successfully saved ${successCount} of ${totalChanges} episodes.`);
+    saveAllBtn.textContent = 'Save All Changes';
+    saveAllBtn.disabled = true; // Disable after saving
+    await fetchEpisodes(); // Refresh the table with the latest data
 }
