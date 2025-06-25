@@ -1,4 +1,4 @@
-// script.js - Final Version: Always includes 'title' and 'status' in save requests.
+// script.js - Final Version: Ensures 'title' and 'status' are always included in save requests.
 
 // --- Global State ---
 let allEpisodes = [];
@@ -215,34 +215,38 @@ function trackChange(episodeId, field, value) {
 }
 
 /**
- * UPDATED: Collects only the fields that have been changed for a specific episode.
+ * FINALIZED: Gathers changed data and ensures required fields are always included.
  * @param {string} episodeId - The ID of the episode.
- * @returns {object} An object containing only the changed fields.
+ * @returns {object} An object containing the data to be sent for update.
  */
-function getChangedData(episodeId) {
-    const changes = pendingChanges[episodeId];
-    if (!changes) return null;
-
+function getDataToSave(episodeId) {
+    const changes = pendingChanges[episodeId] || {};
     const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
+
+    if (!originalEpisode) {
+        console.error("Could not find original episode data for ID:", episodeId);
+        return null;
+    }
     
-    // --- NEW LOGIC: Always include title and status in the update payload ---
+    // Start with a base of required fields from the original data
     const updates = { 
         title: originalEpisode.title,
         status: originalEpisode.status,
-        ...changes 
     };
 
-    // If the title was part of the changes, it will be correctly overwritten above.
-    // If not, the original title will be included.
+    // Merge the tracked changes on top of the base.
+    // This overwrites 'title' if it was changed, but keeps the original if it wasn't.
+    Object.assign(updates, changes);
 
     // Sanitize boolean and number fields
-    for (const key in updates) {
-        if (key === 'content_explicit') {
-            updates[key] = (updates[key] === 'true');
-        } else if ((key === 'season_no' || key === 'episode_no') && updates[key] === '') {
-            // Remove empty number fields so they aren't sent
-            delete updates[key];
-        }
+    if ('content_explicit' in updates) {
+        updates.content_explicit = (updates.content_explicit === 'true');
+    }
+    if (updates.season_no === '' || updates.season_no === null) {
+        delete updates.season_no;
+    }
+    if (updates.episode_no === '' || updates.episode_no === null) {
+        delete updates.episode_no;
     }
     
     return updates;
@@ -250,9 +254,10 @@ function getChangedData(episodeId) {
 
 
 async function handleIndividualSave(episodeId) {
-    const updates = getChangedData(episodeId);
-    // There will always be at least title and status, so check if there are more keys than that.
-    if (!updates || Object.keys(updates).length <= 2) {
+    const updates = getDataToSave(episodeId);
+    
+    // Check if there are any *actual* user changes, besides the required fields we added
+    if (!pendingChanges[episodeId] || Object.keys(pendingChanges[episodeId]).length === 0) {
         alert('No new changes to save for this episode.');
         return;
     }
@@ -302,7 +307,8 @@ async function handleSaveAll() {
 
     for (let i = 0; i < totalChanges; i++) {
         const episodeId = changedEpisodeIds[i];
-        const updates = getChangedData(episodeId);
+        const updates = getDataToSave(episodeId);
+        if (!updates) continue; // Skip if something went wrong
         
         saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
         
