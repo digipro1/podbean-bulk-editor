@@ -1,0 +1,151 @@
+/* style.css */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f7f9;
+    color: #333;
+    margin: 0;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #e0e6ed;
+    padding-bottom: 1rem;
+}
+
+h1 {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+main {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+#status-container {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+#editor-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #555;
+}
+
+input[type="text"] {
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 250px;
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+#preview-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+#preview-btn:hover {
+    background-color: #2980b9;
+}
+
+#save-btn {
+    background-color: #2ecc71;
+    color: white;
+    margin-left: auto; /* Pushes the save button to the right */
+}
+
+#save-btn:hover {
+    background-color: #27ae60;
+}
+
+#save-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.episode-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.episode-table th, .episode-table td {
+    padding: 0.8rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.episode-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.episode-table tbody tr:hover {
+    background-color: #f1f5f8;
+}
+
+/* For previewing changes */
+.pending-change {
+    background-color: #fffbe6; /* Light yellow */
+}
+
+.pending-change .original-text {
+    text-decoration: line-through;
+    color: #e74c3c;
+    opacity: 0.8;
+    font-size: 0.9em;
+    margin-right: 0.5em;
+}
+
+.pending-change .new-text {
+    color: #27ae60;
+    font-weight: bold;
+}
