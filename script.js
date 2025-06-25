@@ -1,29 +1,26 @@
-// script.js - Final Version: Ensures all required fields and correct data types.
+// script.js - Final Version: Gathers all row data on save.
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {}; // This will now just be a flag to enable the save button
+let pendingChanges = {}; // This is now just a flag to enable the save button
 let quillInstances = {}; 
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Netlify Identity Event Listeners ---
+    // Netlify Identity Event Listeners
     netlifyIdentity.on('init', user => {
         currentUser = user;
         netlifyIdentity.renderPlaceholder('#auth-container');
     });
-
     netlifyIdentity.on('login', user => {
         currentUser = user;
         netlifyIdentity.close();
         initializeApp();
     });
-
     netlifyIdentity.on('logout', () => {
         currentUser = null;
         document.getElementById('app-container').style.display = 'none';
     });
-    
     const user = netlifyIdentity.currentUser();
     if (user) {
         currentUser = user;
@@ -51,7 +48,6 @@ async function initializeApp() {
     const editorContainer = appContainer.querySelector('#editor-container');
     
     appContainer.style.display = 'block';
-
     try {
         statusMessage.textContent = 'Authenticating with Podbean...';
         statusMessage.style.display = 'block';
@@ -117,7 +113,7 @@ function renderEpisodes(episodes) {
     episodes.forEach(episode => {
         const row = tbody.insertRow();
         row.dataset.episodeId = episode.id;
-        // Store original data on the row for easy access
+        // Store original data needed for saving on the row itself
         row.dataset.originalStatus = episode.status;
         row.dataset.originalType = episode.episode_type || 'full';
 
@@ -158,12 +154,10 @@ function renderEpisodes(episodes) {
         };
         
         createInputCell(episode.title, 'title');
-
         const descCell = row.insertCell();
         const editorPlaceholder = document.createElement('div');
         editorPlaceholder.id = `quill-editor-${episode.id}`;
         descCell.appendChild(editorPlaceholder);
-
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
         createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
@@ -197,7 +191,7 @@ function renderEpisodes(episodes) {
 // Simplified change tracking - just flags that a row is dirty.
 function trackChange(episodeId) {
     if (!pendingChanges[episodeId]) {
-        pendingChanges[episodeId] = true; // Mark as changed
+        pendingChanges[episodeId] = true;
     }
     document.getElementById('save-all-btn').disabled = false;
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
@@ -214,11 +208,12 @@ function getDataToSave(episodeId) {
     if (!row) return null;
 
     const updates = {
+        // Start with required fields from the original data stored on the row element
         status: row.dataset.originalStatus,
         episode_type: row.dataset.originalType,
     };
 
-    // Gather all fields from the row's inputs
+    // Gather ALL current values from the inputs in the row
     row.querySelectorAll('[data-field]').forEach(input => {
         updates[input.dataset.field] = input.value;
     });
@@ -229,13 +224,10 @@ function getDataToSave(episodeId) {
         updates.content = quill.root.innerHTML;
     }
     
-    // --- CRITICAL FIX: Sanitize data types before sending ---
-    // Ensure content_explicit is a STRING "true" or "false"
+    // --- CRITICAL FIX: Sanitize data types after gathering all data ---
     if ('content_explicit' in updates) {
         updates.content_explicit = String(updates.content_explicit === 'true');
     }
-
-    // Remove empty number fields
     if (updates.season_no === '' || updates.season_no === null) {
         delete updates.season_no;
     }
@@ -245,7 +237,6 @@ function getDataToSave(episodeId) {
 
     return updates;
 }
-
 
 async function handleIndividualSave(episodeId) {
     const updates = getDataToSave(episodeId);
