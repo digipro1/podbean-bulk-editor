@@ -205,11 +205,8 @@ function renderEpisodes(episodes) {
     });
 }
 
-// This function is no longer needed as we read values directly on save.
-// function trackChange(...) {}
-
 /**
- * NEW: Collects all current values from a specific table row.
+ * Collects all current values from a specific table row, ensuring correct data types.
  * @param {string} episodeId - The ID of the episode's row to read from.
  * @returns {object} An object containing all editable field values.
  */
@@ -218,15 +215,33 @@ function getRowData(episodeId) {
     if (!row) return null;
 
     const rowData = {};
-    // Get values from all standard inputs and textareas
     row.querySelectorAll('[data-field]').forEach(input => {
-        rowData[input.dataset.field] = input.value;
+        const field = input.dataset.field;
+        let value = input.value;
+
+        // --- NEW DATA SANITIZATION LOGIC ---
+        if (field === 'content_explicit') {
+            // Convert string "true" or "false" to a boolean value
+            rowData[field] = (value === 'true');
+        } else if ((field === 'season_no' || field === 'episode_no') && value === '') {
+            // If number fields are empty, do not include them in the update payload.
+            // This prevents sending "" for a number field.
+            return; 
+        } else {
+            rowData[field] = value;
+        }
     });
 
     // Get content specifically from the Quill editor
     const quill = quillInstances[episodeId];
     if (quill) {
         rowData.content = quill.root.innerHTML;
+    }
+    
+    // Ensure title is always present, even if unchanged
+    if (!rowData.title) {
+        const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
+        rowData.title = originalEpisode.title;
     }
 
     return rowData;
@@ -258,6 +273,7 @@ async function handleIndividualSave(episodeId) {
         }
 
         saveButton.textContent = 'Saved!';
+        // Since we don't track changes anymore, no need to remove row class
         setTimeout(() => { saveButton.textContent = 'Save'; saveButton.disabled = false; }, 2000);
 
     } catch (error) {
@@ -300,5 +316,5 @@ async function handleSaveAll() {
     alert(`Successfully saved ${successCount} of ${totalChanges} episodes.`);
     saveAllBtn.textContent = 'Save All Changes';
     saveAllBtn.disabled = false; // Re-enable after saving
-    await fetchEpisodes(); // Refresh all data
+    await fetchEpisodes(); // Refresh all data to show latest state
 }
