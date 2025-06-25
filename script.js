@@ -2,7 +2,7 @@
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {}; // This will now just be a flag to enable the save button
+let pendingChanges = {};
 let quillInstances = {}; 
 let currentUser = null;
 
@@ -105,7 +105,8 @@ function renderEpisodes(episodes) {
     table.className = 'episode-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    const headers = ['Title', 'Description', 'Season', 'Episode', 'Content Rating', 'Summary', 'Author', 'Action'];
+    // Re-added Episode Type as it's required. It will be read-only.
+    const headers = ['Title', 'Description', 'Season', 'Episode', 'Episode Type', 'Content Rating', 'Summary', 'Author', 'Action'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -125,7 +126,7 @@ function renderEpisodes(episodes) {
             input.className = 'editable-input';
             input.value = value || '';
             input.dataset.field = fieldName;
-            input.addEventListener('input', () => trackChange(episode.id));
+            input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
             cell.appendChild(input);
         };
         const createSelectCell = (value, fieldName, options) => {
@@ -140,7 +141,7 @@ function renderEpisodes(episodes) {
                 if (String(val) === String(value)) option.selected = true;
                 select.appendChild(option);
             }
-            select.addEventListener('change', () => trackChange(episode.id));
+            select.addEventListener('change', () => trackChange(episode.id, fieldName, select.value));
             cell.appendChild(select);
         };
         const createTextareaCell = (value, fieldName) => {
@@ -149,7 +150,7 @@ function renderEpisodes(episodes) {
             textarea.className = 'editable-textarea';
             textarea.dataset.field = fieldName;
             textarea.value = value || '';
-            textarea.addEventListener('input', () => trackChange(episode.id));
+            textarea.addEventListener('input', () => trackChange(episode.id, fieldName, textarea.value));
             cell.appendChild(textarea);
         };
         
@@ -162,6 +163,11 @@ function renderEpisodes(episodes) {
 
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
+        
+        // Episode Type is now read-only text, but it's back in the table
+        const typeCell = row.insertCell();
+        typeCell.textContent = episode.episode_type || 'full';
+        
         createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
@@ -185,73 +191,64 @@ function renderEpisodes(episodes) {
             });
             quill.root.innerHTML = episode.content || '';
             quillInstances[episode.id] = quill;
-            quill.on('text-change', () => trackChange(episode.id));
+            quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
         }
     });
 }
 
-// Simplified change tracking - just flags that a row is dirty.
-function trackChange(episodeId) {
+function trackChange(episodeId, field, value) {
     if (!pendingChanges[episodeId]) {
-        pendingChanges[episodeId] = true; // Mark as changed
+        pendingChanges[episodeId] = {};
     }
+    pendingChanges[episodeId][field] = value;
+    
     document.getElementById('save-all-btn').disabled = false;
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if(row) row.classList.add('changed-row');
 }
 
 /**
- * FINALIZED: Gathers ALL data from a row and ensures correct data types.
+ * FINALIZED: Gathers changed data and ensures all required fields are always included.
  * @param {string} episodeId - The ID of the episode.
- * @returns {object} An object containing all fields for update.
+ * @returns {object} An object containing the data to be sent for update.
  */
 function getDataToSave(episodeId) {
+    const changes = pendingChanges[episodeId] || {};
     const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
-    const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
-    if (!originalEpisode || !row) return null;
 
-    const updates = {
-        status: originalEpisode.status // Always include original status
-    };
-
-    // Gather all fields from the row
-    row.querySelectorAll('[data-field]').forEach(input => {
-        updates[input.dataset.field] = input.value;
-    });
-
-    // Get content from Quill editor
-    const quill = quillInstances[episodeId];
-    if (quill) {
-        updates.content = quill.root.innerHTML;
+    if (!originalEpisode) {
+        console.error("Could not find original episode data for ID:", episodeId);
+        return null;
     }
     
-    // --- CRITICAL FIX: Sanitize data types before sending ---
-    // Ensure title is present
-    if (!updates.title) {
-        updates.title = originalEpisode.title;
-    }
+    // --- CRITICAL FIX: Start with a base of all required fields ---
+    const updates = { 
+        title: originalEpisode.title,
+        status: originalEpisode.status,
+        episode_type: originalEpisode.episode_type || 'full', // Always include episode_type
+    };
 
-    // Ensure content_explicit is a STRING "true" or "false"
-    if ('content_explicit' in updates) {
-        updates.content_explicit = String(updates.content_explicit === 'true');
-    }
+    // Merge the tracked changes on top of the base.
+    Object.assign(updates, changes);
 
-    // Remove empty number fields
-    if (updates.season_no === '' || updates.season_no === null) {
-        delete updates.season_no;
+    // Sanitize data types before sending
+    for (const key in updates) {
+        if (key === 'content_explicit') {
+            updates[key] = String(updates[key] === 'true' || updates[key] === true);
+        } else if ((key === 'season_no' || key === 'episode_no') && (updates[key] === '' || updates[key] === null)) {
+            delete updates[key];
+        }
     }
-    if (updates.episode_no === '' || updates.episode_no === null) {
-        delete updates.episode_no;
-    }
-
+    
     return updates;
 }
 
 
 async function handleIndividualSave(episodeId) {
     const updates = getDataToSave(episodeId);
-    if (!updates) {
-        alert('Could not find data to save.');
+    
+    if (!updates || !pendingChanges[episodeId] || Object.keys(pendingChanges[episodeId]).length === 0) {
+        alert('No new changes to save for this episode.');
         return;
     }
     
