@@ -1,29 +1,71 @@
-// script.js - Full Editable Grid with Quill Initialization Fix
+// script.js - Final Version with Netlify Identity and Quill Fix
 
 // --- Global State ---
 let allEpisodes = [];
 let pendingChanges = {};
 let quillInstances = {}; 
+let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
-    document.getElementById('save-all-btn').addEventListener('click', handleSaveAll);
+    // --- Netlify Identity Event Listeners ---
+    netlifyIdentity.on('init', user => {
+        currentUser = user;
+        netlifyIdentity.renderPlaceholder('#auth-container');
+    });
+
+    netlifyIdentity.on('login', user => {
+        currentUser = user;
+        netlifyIdentity.close();
+        initializeApp();
+    });
+
+    netlifyIdentity.on('logout', () => {
+        currentUser = null;
+        document.getElementById('app-container').style.display = 'none';
+    });
+    
+    // Check if a user is already logged in when the page loads
+    if (netlifyIdentity.currentUser()) {
+        initializeApp();
+    }
 });
 
+function setupEventListeners() {
+    const saveAllBtn = document.getElementById('save-all-btn');
+    if(saveAllBtn) {
+        saveAllBtn.addEventListener('click', handleSaveAll);
+    }
+}
+
 async function initializeApp() {
-    // ... (This function is unchanged)
-    const statusMessage = document.getElementById('status-message');
-    const editorContainer = document.getElementById('editor-container');
+    const appContainer = document.getElementById('app-container');
+    const statusMessage = appContainer.querySelector('#status-message');
+    const editorContainer = appContainer.querySelector('#editor-container');
+    
+    appContainer.style.display = 'block';
+
     try {
-        statusMessage.textContent = 'Authenticating...';
+        statusMessage.textContent = 'Authenticating with Podbean...';
+        statusMessage.style.display = 'block';
+        editorContainer.style.display = 'none';
+
         const response = await fetch('/api/get-token');
+        if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.error || 'Could not get Podbean token. Please re-login.');
+        }
         const tokenData = await response.json();
-        if (!response.ok) throw new Error(tokenData.error_description || 'Failed to authenticate.');
         window.podbeanAccessToken = tokenData.access_token;
+        
         statusMessage.textContent = 'Authentication successful. Fetching episodes...';
+        
         await fetchEpisodes();
+
         editorContainer.style.display = 'block';
         statusMessage.style.display = 'none';
+        
+        setupEventListeners();
+
     } catch (error) {
         statusMessage.style.color = 'red';
         statusMessage.textContent = `Error: ${error.message}`;
@@ -31,7 +73,6 @@ async function initializeApp() {
 }
 
 async function fetchEpisodes() {
-    // ... (This function is unchanged)
     let fetchedEpisodes = [];
     let offset = 0;
     const limit = 100;
@@ -48,10 +89,6 @@ async function fetchEpisodes() {
     renderEpisodes(allEpisodes);
 }
 
-/**
- * Renders an editable grid with appropriate input types for each field.
- * @param {Array} episodes - The array of episode objects.
- */
 function renderEpisodes(episodes) {
     const tableContainer = document.getElementById('table-container');
     tableContainer.innerHTML = '';
@@ -76,7 +113,6 @@ function renderEpisodes(episodes) {
         const row = tbody.insertRow();
         row.dataset.episodeId = episode.id;
 
-        // --- Create all cells and inputs first ---
         const createInputCell = (value, fieldName, type = 'text') => {
             const cell = row.insertCell();
             const input = document.createElement('input');
@@ -87,7 +123,6 @@ function renderEpisodes(episodes) {
             input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
             cell.appendChild(input);
         };
-
         const createSelectCell = (value, fieldName, options) => {
             const cell = row.insertCell();
             const select = document.createElement('select');
@@ -102,7 +137,6 @@ function renderEpisodes(episodes) {
             select.addEventListener('change', () => trackChange(episode.id, fieldName, select.value));
             cell.appendChild(select);
         };
-        
         const createTextareaCell = (value, fieldName) => {
             const cell = row.insertCell();
             const textarea = document.createElement('textarea');
@@ -116,12 +150,11 @@ function renderEpisodes(episodes) {
         
         createInputCell(episode.title, 'title');
 
-        // For Quill, create a placeholder div with a unique ID
         const descCell = row.insertCell();
         const editorPlaceholder = document.createElement('div');
         editorPlaceholder.id = `quill-editor-${episode.id}`;
         editorPlaceholder.className = 'quill-placeholder';
-        editorPlaceholder.innerHTML = episode.content || ''; // Put initial content here
+        editorPlaceholder.innerHTML = episode.content || '';
         descCell.appendChild(editorPlaceholder);
 
         createInputCell(episode.season_no, 'season_no', 'number');
@@ -139,10 +172,8 @@ function renderEpisodes(episodes) {
         actionCell.appendChild(saveBtn);
     });
 
-    // --- STEP 1: ADD THE FULLY BUILT TABLE TO THE DOM ---
     tableContainer.appendChild(table);
 
-    // --- STEP 2: NOW THAT THE TABLE IS ON THE PAGE, INITIALIZE QUILL EDITORS ---
     episodes.forEach(episode => {
         const editorNode = document.getElementById(`quill-editor-${episode.id}`);
         if (editorNode) {
@@ -157,7 +188,6 @@ function renderEpisodes(episodes) {
 }
 
 function trackChange(episodeId, field, value) {
-    // ... (This function is unchanged)
     if (!pendingChanges[episodeId]) {
         pendingChanges[episodeId] = {};
     }
@@ -168,7 +198,6 @@ function trackChange(episodeId, field, value) {
 }
 
 async function handleIndividualSave(episodeId) {
-    // ... (This function is unchanged)
     const changes = pendingChanges[episodeId];
     if (!changes) { alert('No changes to save for this episode.'); return; }
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
@@ -197,7 +226,6 @@ async function handleIndividualSave(episodeId) {
 }
 
 async function handleSaveAll() {
-    // ... (This function is unchanged)
     const saveAllBtn = document.getElementById('save-all-btn');
     const changedEpisodeIds = Object.keys(pendingChanges);
     if (changedEpisodeIds.length === 0) { alert('No changes to save.'); return; }
