@@ -1,4 +1,4 @@
-// script.js - Final Version: Tracks and submits only changed fields.
+// script.js - Final Version: Includes 'status' field in all save requests.
 
 // --- Global State ---
 let allEpisodes = [];
@@ -118,8 +118,7 @@ function renderEpisodes(episodes) {
     table.className = 'episode-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    // Re-added 'Episode Type' to headers, but it will be read-only
-    const headers = ['Title', 'Description', 'Season', 'Episode', 'Episode Type', 'Content Rating', 'Summary', 'Author', 'Action'];
+    const headers = ['Title', 'Description', 'Season', 'Episode', 'Content Rating', 'Summary', 'Author', 'Action'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -138,6 +137,7 @@ function renderEpisodes(episodes) {
             input.type = type;
             input.className = 'editable-input';
             input.value = value || '';
+            input.dataset.field = fieldName;
             input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
             cell.appendChild(input);
         };
@@ -145,6 +145,7 @@ function renderEpisodes(episodes) {
             const cell = row.insertCell();
             const select = document.createElement('select');
             select.className = 'editable-select';
+            select.dataset.field = fieldName;
             for (const [text, val] of Object.entries(options)) {
                 const option = document.createElement('option');
                 option.value = val;
@@ -159,8 +160,8 @@ function renderEpisodes(episodes) {
             const cell = row.insertCell();
             const textarea = document.createElement('textarea');
             textarea.className = 'editable-textarea';
+            textarea.dataset.field = fieldName;
             textarea.value = value || '';
-            textarea.rows = 2;
             textarea.addEventListener('input', () => trackChange(episode.id, fieldName, textarea.value));
             cell.appendChild(textarea);
         };
@@ -174,11 +175,6 @@ function renderEpisodes(episodes) {
 
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
-        
-        // Episode Type is now read-only text
-        const typeCell = row.insertCell();
-        typeCell.textContent = episode.episode_type || 'full';
-
         createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
@@ -211,22 +207,43 @@ function trackChange(episodeId, field, value) {
     if (!pendingChanges[episodeId]) {
         pendingChanges[episodeId] = {};
     }
-    // Sanitize number fields before storing
-    if ((field === 'season_no' || field === 'episode_no') && value === '') {
-        // If user clears the field, we remove it from changes to avoid sending empty string
-        delete pendingChanges[episodeId][field];
-    } else {
-        pendingChanges[episodeId][field] = value;
-    }
+    pendingChanges[episodeId][field] = value;
     
     document.getElementById('save-all-btn').disabled = false;
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if(row) row.classList.add('changed-row');
 }
 
+/**
+ * UPDATED: Collects only the fields that have been changed for a specific episode.
+ * @param {string} episodeId - The ID of the episode.
+ * @returns {object} An object containing only the changed fields.
+ */
+function getChangedData(episodeId) {
+    const changes = pendingChanges[episodeId];
+    if (!changes) return null;
+
+    // --- NEW LOGIC: Always include the original status in the update payload ---
+    const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
+    const updates = { ...changes, status: originalEpisode.status };
+
+    // Sanitize boolean and number fields
+    for (const key in updates) {
+        if (key === 'content_explicit') {
+            updates[key] = (updates[key] === 'true');
+        } else if ((key === 'season_no' || key === 'episode_no') && updates[key] === '') {
+            // Remove empty number fields so they aren't sent
+            delete updates[key];
+        }
+    }
+    
+    return updates;
+}
+
+
 async function handleIndividualSave(episodeId) {
-    const updates = pendingChanges[episodeId];
-    if (!updates || Object.keys(updates).length === 0) {
+    const updates = getChangedData(episodeId);
+    if (!updates || Object.keys(updates).length <= 1) { // <=1 because we always add status
         alert('No changes to save for this episode.');
         return;
     }
@@ -276,7 +293,7 @@ async function handleSaveAll() {
 
     for (let i = 0; i < totalChanges; i++) {
         const episodeId = changedEpisodeIds[i];
-        const updates = pendingChanges[episodeId];
+        const updates = getChangedData(episodeId);
         
         saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
         
