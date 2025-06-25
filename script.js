@@ -1,13 +1,12 @@
-// script.js - Final Version: Ensures 'title' and 'status' are always included in save requests.
+// script.js - Final Version: Corrects data types and ensures required fields.
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {}; // E.g., { "episodeId123": { title: "New Title" } }
+let pendingChanges = {};
 let quillInstances = {}; 
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Netlify Identity Event Listeners ---
     netlifyIdentity.on('init', user => {
         currentUser = user;
         netlifyIdentity.renderPlaceholder('#auth-container');
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('app-container').style.display = 'none';
     });
     
-    // Check if a user is already logged in when the page loads
     const user = netlifyIdentity.currentUser();
     if (user) {
         currentUser = user;
@@ -39,21 +37,12 @@ function setupEventListeners() {
     }
 }
 
-// --- Helper function for authenticated fetch ---
 async function fetchWithAuth(url, options = {}) {
     const user = netlifyIdentity.currentUser();
-    if (!user) {
-        throw new Error("User not logged in.");
-    }
-
-    const headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${user.token.access_token}`
-    };
-
+    if (!user) throw new Error("User not logged in.");
+    const headers = { ...options.headers, 'Authorization': `Bearer ${user.token.access_token}` };
     return fetch(url, { ...options, headers });
 }
-
 
 async function initializeApp() {
     const appContainer = document.getElementById('app-container');
@@ -76,14 +65,11 @@ async function initializeApp() {
         window.podbeanAccessToken = tokenData.access_token;
         
         statusMessage.textContent = 'Authentication successful. Fetching episodes...';
-        
         await fetchEpisodes();
 
         editorContainer.style.display = 'block';
         statusMessage.style.display = 'none';
-        
         setupEventListeners();
-
     } catch (error) {
         statusMessage.style.color = 'red';
         statusMessage.textContent = `Error: ${error.message}`;
@@ -208,14 +194,13 @@ function trackChange(episodeId, field, value) {
         pendingChanges[episodeId] = {};
     }
     pendingChanges[episodeId][field] = value;
-    
     document.getElementById('save-all-btn').disabled = false;
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if(row) row.classList.add('changed-row');
 }
 
 /**
- * FINALIZED: Gathers changed data and ensures required fields are always included.
+ * FINALIZED: Gathers changed data and ensures required fields and data types are correct.
  * @param {string} episodeId - The ID of the episode.
  * @returns {object} An object containing the data to be sent for update.
  */
@@ -235,18 +220,17 @@ function getDataToSave(episodeId) {
     };
 
     // Merge the tracked changes on top of the base.
-    // This overwrites 'title' if it was changed, but keeps the original if it wasn't.
     Object.assign(updates, changes);
 
-    // Sanitize boolean and number fields
-    if ('content_explicit' in updates) {
-        updates.content_explicit = (updates.content_explicit === 'true');
-    }
-    if (updates.season_no === '' || updates.season_no === null) {
-        delete updates.season_no;
-    }
-    if (updates.episode_no === '' || updates.episode_no === null) {
-        delete updates.episode_no;
+    // --- CRITICAL FIX: Sanitize data types before sending ---
+    for (const key in updates) {
+        if (key === 'content_explicit') {
+            // Ensure this is a string "true" or "false"
+            updates[key] = String(updates[key] === 'true' || updates[key] === true);
+        } else if ((key === 'season_no' || key === 'episode_no') && (updates[key] === '' || updates[key] === null)) {
+            // Remove empty number fields so they aren't sent
+            delete updates[key];
+        }
     }
     
     return updates;
@@ -256,8 +240,7 @@ function getDataToSave(episodeId) {
 async function handleIndividualSave(episodeId) {
     const updates = getDataToSave(episodeId);
     
-    // Check if there are any *actual* user changes, besides the required fields we added
-    if (!pendingChanges[episodeId] || Object.keys(pendingChanges[episodeId]).length === 0) {
+    if (!updates || !pendingChanges[episodeId] || Object.keys(pendingChanges[episodeId]).length === 0) {
         alert('No new changes to save for this episode.');
         return;
     }
@@ -308,7 +291,7 @@ async function handleSaveAll() {
     for (let i = 0; i < totalChanges; i++) {
         const episodeId = changedEpisodeIds[i];
         const updates = getDataToSave(episodeId);
-        if (!updates) continue; // Skip if something went wrong
+        if (!updates) continue;
         
         saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
         
@@ -327,5 +310,5 @@ async function handleSaveAll() {
     alert(`Successfully saved ${successCount} of ${totalChanges} episodes.`);
     saveAllBtn.textContent = 'Save All Changes';
     saveAllBtn.disabled = true;
-    await fetchEpisodes(); // Refresh all data to show latest state
+    await fetchEpisodes();
 }
