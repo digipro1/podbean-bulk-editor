@@ -1,4 +1,4 @@
-// script.js - Final Version with Corrected Save Logic
+// script.js - Final Version with Episode Type field removed
 
 // --- Global State ---
 let allEpisodes = [];
@@ -39,7 +39,7 @@ function setupEventListeners() {
     }
 }
 
-// --- NEW HELPER FUNCTION FOR AUTHENTICATED FETCH ---
+// --- Helper function for authenticated fetch ---
 async function fetchWithAuth(url, options = {}) {
     const user = netlifyIdentity.currentUser();
     if (!user) {
@@ -118,7 +118,8 @@ function renderEpisodes(episodes) {
     table.className = 'episode-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    const headers = ['Title', 'Description', 'Season', 'Episode', 'Episode Type', 'Content Rating', 'Summary', 'Author', 'Action'];
+    // --- UPDATED: Removed 'Episode Type' from headers ---
+    const headers = ['Title', 'Description', 'Season', 'Episode', 'Content Rating', 'Summary', 'Author', 'Action'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -131,14 +132,13 @@ function renderEpisodes(episodes) {
         const row = tbody.insertRow();
         row.dataset.episodeId = episode.id;
 
-        // Helper functions now just create the inputs, they don't add listeners
         const createInputCell = (value, fieldName, type = 'text') => {
             const cell = row.insertCell();
             const input = document.createElement('input');
             input.type = type;
             input.className = 'editable-input';
             input.value = value || '';
-            input.dataset.field = fieldName; // Identify field
+            input.dataset.field = fieldName;
             input.placeholder = `Enter ${fieldName.replace('_', ' ')}`;
             cell.appendChild(input);
         };
@@ -146,7 +146,7 @@ function renderEpisodes(episodes) {
             const cell = row.insertCell();
             const select = document.createElement('select');
             select.className = 'editable-select';
-            select.dataset.field = fieldName; // Identify field
+            select.dataset.field = fieldName;
             for (const [text, val] of Object.entries(options)) {
                 const option = document.createElement('option');
                 option.value = val;
@@ -160,7 +160,7 @@ function renderEpisodes(episodes) {
             const cell = row.insertCell();
             const textarea = document.createElement('textarea');
             textarea.className = 'editable-textarea';
-            textarea.dataset.field = fieldName; // Identify field
+            textarea.dataset.field = fieldName;
             textarea.value = value || '';
             textarea.placeholder = 'Enter summary...';
             textarea.rows = 2;
@@ -176,7 +176,7 @@ function renderEpisodes(episodes) {
 
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
-        createSelectCell(episode.episode_type, 'episode_type', { 'Full': 'full', 'Trailer': 'trailer', 'Bonus': 'bonus' });
+        // --- UPDATED: Removed the line that creates the 'Episode Type' dropdown ---
         createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
@@ -191,7 +191,6 @@ function renderEpisodes(episodes) {
 
     tableContainer.appendChild(table);
 
-    // Initialize Quill editors after the table is in the DOM
     episodes.forEach(episode => {
         const editorNode = document.getElementById(`quill-editor-${episode.id}`);
         if (editorNode) {
@@ -205,11 +204,7 @@ function renderEpisodes(episodes) {
     });
 }
 
-/**
- * Collects all current values from a specific table row, ensuring correct data types.
- * @param {string} episodeId - The ID of the episode's row to read from.
- * @returns {object} An object containing all editable field values.
- */
+
 function getRowData(episodeId) {
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if (!row) return null;
@@ -219,26 +214,20 @@ function getRowData(episodeId) {
         const field = input.dataset.field;
         let value = input.value;
 
-        // --- NEW DATA SANITIZATION LOGIC ---
         if (field === 'content_explicit') {
-            // Convert string "true" or "false" to a boolean value
             rowData[field] = (value === 'true');
         } else if ((field === 'season_no' || field === 'episode_no') && value === '') {
-            // If number fields are empty, do not include them in the update payload.
-            // This prevents sending "" for a number field.
             return; 
         } else {
             rowData[field] = value;
         }
     });
 
-    // Get content specifically from the Quill editor
     const quill = quillInstances[episodeId];
     if (quill) {
         rowData.content = quill.root.innerHTML;
     }
     
-    // Ensure title is always present, even if unchanged
     if (!rowData.title) {
         const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
         rowData.title = originalEpisode.title;
@@ -273,7 +262,6 @@ async function handleIndividualSave(episodeId) {
         }
 
         saveButton.textContent = 'Saved!';
-        // Since we don't track changes anymore, no need to remove row class
         setTimeout(() => { saveButton.textContent = 'Save'; saveButton.disabled = false; }, 2000);
 
     } catch (error) {
@@ -315,6 +303,6 @@ async function handleSaveAll() {
     
     alert(`Successfully saved ${successCount} of ${totalChanges} episodes.`);
     saveAllBtn.textContent = 'Save All Changes';
-    saveAllBtn.disabled = false; // Re-enable after saving
-    await fetchEpisodes(); // Refresh all data to show latest state
+    saveAllBtn.disabled = false;
+    await fetchEpisodes();
 }
