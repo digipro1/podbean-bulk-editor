@@ -1,8 +1,8 @@
-// script.js - Full Editable Grid with Correct Data Types
+// script.js - Full Editable Grid with Quill Initialization Fix
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {}; // E.g., { "episodeId123": { title: "New Title" } }
+let pendingChanges = {};
 let quillInstances = {}; 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -76,7 +76,7 @@ function renderEpisodes(episodes) {
         const row = tbody.insertRow();
         row.dataset.episodeId = episode.id;
 
-        // --- Helper to create a cell with a standard text/number input ---
+        // --- Create all cells and inputs first ---
         const createInputCell = (value, fieldName, type = 'text') => {
             const cell = row.insertCell();
             const input = document.createElement('input');
@@ -84,12 +84,10 @@ function renderEpisodes(episodes) {
             input.className = 'editable-input';
             input.value = value || '';
             input.placeholder = `Enter ${fieldName.replace('_', ' ')}`;
-            cell.appendChild(input);
             input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
-            return cell;
+            cell.appendChild(input);
         };
 
-        // --- Helper to create a cell with a select dropdown ---
         const createSelectCell = (value, fieldName, options) => {
             const cell = row.insertCell();
             const select = document.createElement('select');
@@ -98,17 +96,13 @@ function renderEpisodes(episodes) {
                 const option = document.createElement('option');
                 option.value = val;
                 option.textContent = text;
-                if (val == value) {
-                    option.selected = true;
-                }
+                if (val == value) option.selected = true;
                 select.appendChild(option);
             }
-            cell.appendChild(select);
             select.addEventListener('change', () => trackChange(episode.id, fieldName, select.value));
-            return cell;
+            cell.appendChild(select);
         };
-
-        // --- Create a cell for a textarea ---
+        
         const createTextareaCell = (value, fieldName) => {
             const cell = row.insertCell();
             const textarea = document.createElement('textarea');
@@ -116,25 +110,19 @@ function renderEpisodes(episodes) {
             textarea.value = value || '';
             textarea.placeholder = 'Enter summary...';
             textarea.rows = 2;
-            cell.appendChild(textarea);
             textarea.addEventListener('input', () => trackChange(episode.id, fieldName, textarea.value));
-            return cell;
+            cell.appendChild(textarea);
         };
         
-        // -- Render all cells using the new helpers --
         createInputCell(episode.title, 'title');
 
-        // Description (Rich Text with Quill.js)
+        // For Quill, create a placeholder div with a unique ID
         const descCell = row.insertCell();
-        const editorContainer = document.createElement('div');
-        editorContainer.className = 'quill-editor-container';
-        const editorEl = document.createElement('div');
-        editorContainer.appendChild(editorEl);
-        descCell.appendChild(editorContainer);
-        const quill = new Quill(editorEl, { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] } });
-        quill.root.innerHTML = episode.content || '';
-        quillInstances[episode.id] = quill;
-        quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
+        const editorPlaceholder = document.createElement('div');
+        editorPlaceholder.id = `quill-editor-${episode.id}`;
+        editorPlaceholder.className = 'quill-placeholder';
+        editorPlaceholder.innerHTML = episode.content || ''; // Put initial content here
+        descCell.appendChild(editorPlaceholder);
 
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
@@ -143,7 +131,6 @@ function renderEpisodes(episodes) {
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
 
-        // Action Cell with individual Save Button
         const actionCell = row.insertCell();
         const saveBtn = document.createElement('button');
         saveBtn.textContent = 'Save';
@@ -151,22 +138,37 @@ function renderEpisodes(episodes) {
         saveBtn.onclick = () => handleIndividualSave(episode.id);
         actionCell.appendChild(saveBtn);
     });
+
+    // --- STEP 1: ADD THE FULLY BUILT TABLE TO THE DOM ---
+    tableContainer.appendChild(table);
+
+    // --- STEP 2: NOW THAT THE TABLE IS ON THE PAGE, INITIALIZE QUILL EDITORS ---
+    episodes.forEach(episode => {
+        const editorNode = document.getElementById(`quill-editor-${episode.id}`);
+        if (editorNode) {
+            const quill = new Quill(editorNode, {
+                theme: 'snow',
+                modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] }
+            });
+            quillInstances[episode.id] = quill;
+            quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
+        }
+    });
 }
 
 function trackChange(episodeId, field, value) {
+    // ... (This function is unchanged)
     if (!pendingChanges[episodeId]) {
         pendingChanges[episodeId] = {};
     }
     pendingChanges[episodeId][field] = value;
     document.getElementById('save-all-btn').disabled = false;
-    
-    // Visually mark the row as having pending changes
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if(row) row.classList.add('changed-row');
 }
 
 async function handleIndividualSave(episodeId) {
-    // ... (This function is unchanged, it correctly sends the pendingChanges object)
+    // ... (This function is unchanged)
     const changes = pendingChanges[episodeId];
     if (!changes) { alert('No changes to save for this episode.'); return; }
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
@@ -195,7 +197,7 @@ async function handleIndividualSave(episodeId) {
 }
 
 async function handleSaveAll() {
-    // ... (This function is also unchanged)
+    // ... (This function is unchanged)
     const saveAllBtn = document.getElementById('save-all-btn');
     const changedEpisodeIds = Object.keys(pendingChanges);
     if (changedEpisodeIds.length === 0) { alert('No changes to save.'); return; }
