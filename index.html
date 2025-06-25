@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podbean Bulk Editor</title>
-    <!-- We will create style.css later -->
-    <!-- <link rel="stylesheet" href="style.css"> -->
+    <!-- Link our new stylesheet -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
@@ -15,10 +15,27 @@
         <div id="status-container">
             <p id="status-message">Initializing...</p>
         </div>
+        
         <div id="editor-container" style="display: none;">
-            <!-- We will build the editor UI here in the next step -->
+            
+            <!-- Editor Controls Section -->
+            <div id="editor-controls">
+                <div class="control-group">
+                    <label for="find-input">Find Text</label>
+                    <input type="text" id="find-input" placeholder="Text to find in titles...">
+                </div>
+                 <div class="control-group">
+                    <label for="replace-input">Replace With</label>
+                    <input type="text" id="replace-input" placeholder="Text to replace with...">
+                </div>
+                <button id="preview-btn">Preview Changes</button>
+                <button id="save-btn" disabled>Save Changes</button>
+            </div>
+            
             <h2>Your Episodes</h2>
-            <div id="episode-list"></div>
+            <div id="episode-list">
+                <!-- The episode table will be rendered here by JavaScript -->
+            </div>
         </div>
     </main>
     <script src="script.js"></script>
