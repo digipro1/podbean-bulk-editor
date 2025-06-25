@@ -1,6 +1,6 @@
-/* style.css - Editable Grid Theme with Data Types */
+/* style.css - Editable Grid Theme with Data Types & Auth */
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('[https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap)');
 
 :root {
     --dark-bg: #1B242F;
@@ -27,17 +27,19 @@ header {
     color: var(--light-text);
     padding: 1rem 2rem;
     border-bottom: 4px solid var(--accent-blue);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 header h1 {
     margin: 0;
     font-size: 1.75rem;
     font-weight: 700;
-    text-align: center;
 }
 
 main {
-    max-width: 1600px; /* Even wider for better spacing */
+    max-width: 1600px;
     margin: 2rem auto;
     padding: 2rem;
     background-color: #fff;
@@ -88,12 +90,10 @@ button:disabled { background-color: var(--disabled-gray); color: white; cursor: 
 .episode-table th, .episode-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 .episode-table th { background-color: #F1F3F5; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 1rem 0.5rem; }
 
-/* Visual indicator for a row with pending changes */
 .episode-table tr.changed-row {
     background-color: var(--pending-yellow) !important;
 }
 
-/* Common style for all input types in the table */
 .editable-input, .editable-select, .editable-textarea {
     width: 95%;
     padding: 0.6rem;
@@ -102,20 +102,31 @@ button:disabled { background-color: var(--disabled-gray); color: white; cursor: 
     font: inherit;
     background-color: #fff;
     transition: box-shadow 0.2s;
-    box-sizing: border-box; /* Ensure padding doesn't affect width */
+    box-sizing: border-box;
 }
 .editable-input:focus, .editable-select:focus, .editable-textarea:focus {
     outline: none;
     box-shadow: 0 0 0 2px var(--accent-blue);
 }
+.editable-textarea { resize: vertical; }
 
-.editable-textarea {
-    resize: vertical;
+.quill-editor-container, .quill-placeholder { border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
+.quill-editor-container .ql-container, .quill-placeholder .ql-container { border: none !important; font: inherit !important; }
+.quill-editor-container .ql-editor, .quill-placeholder .ql-editor { padding: 8px !important; min-height: 50px; }
+.quill-editor-container:focus-within, .quill-placeholder:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px var(--accent-blue); }
+.quill-editor-container .ql-toolbar, .quill-placeholder .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
+
+#auth-container button {
+    background: none;
+    border: none;
+    color: var(--light-text);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem;
 }
-
-/* Quill Editor Specific Styles */
-.quill-editor-container { border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
-.quill-editor-container .ql-container { border: none !important; font: inherit !important; }
-.quill-editor-container .ql-editor { padding: 8px !important; min-height: 50px; }
-.quill-editor-container:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px var(--accent-blue); }
-.quill-editor-container .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
+#auth-container button:hover {
+    text-decoration: underline;
+    transform: none;
+}
