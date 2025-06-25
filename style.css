@@ -1,9 +1,7 @@
-/* style.css - Adapted from Vimeo Editor Theme */
+/* style.css - Editable Grid Theme */
 
-/* Import a font similar to the target website */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
-/* Define Color Palette */
 :root {
     --dark-bg: #1B242F;
     --accent-blue: #0072CE;
@@ -11,12 +9,11 @@
     --dark-text: #333333;
     --border-color: #EAEAEA;
     --bg-color: #F8F9FA;
-    --editable-bg: #E3F2FD; /* Light blue for pending/editable fields */
+    --editable-bg: #E3F2FD;
     --success-green: #28a745;
     --disabled-gray: #B0BEC5;
 }
 
-/* General Body Styles */
 body {
     font-family: 'Montserrat', sans-serif;
     margin: 0;
@@ -24,7 +21,6 @@ body {
     color: var(--dark-text);
 }
 
-/* Header Styles */
 header {
     background-color: var(--dark-bg);
     color: var(--light-text);
@@ -39,9 +35,8 @@ header h1 {
     text-align: center;
 }
 
-/* Main App Container */
 main {
-    max-width: 1200px;
+    max-width: 1400px; /* Wider for more columns */
     margin: 2rem auto;
     padding: 2rem;
     background-color: #fff;
@@ -49,42 +44,16 @@ main {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-#status-container {
-    text-align: center;
-    padding: 2rem;
-}
+#status-container { text-align: center; padding: 2rem; }
 
-/* Controls Section */
-#editor-controls {
+/* New Actions Bar Styles */
+#actions-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    align-items: flex-end;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
+    justify-content: flex-end; /* Pushes button to the right */
+    padding: 1rem 1.5rem;
     background-color: #f1f3f5;
     border-radius: 8px;
-}
-
-.control-group {
-    display: flex;
-    flex-direction: column;
-}
-
-label {
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    font-size: 0.9rem;
-}
-
-input[type="text"], select {
-    font-family: 'Montserrat', sans-serif;
-    padding: 0.75rem;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    width: 250px;
-    font-size: 1rem;
+    margin-bottom: 2rem;
 }
 
 button {
@@ -97,84 +66,46 @@ button {
     font-size: 0.9rem;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
+button:hover { transform: translateY(-2px); }
+button:disabled { background-color: var(--disabled-gray); color: white; cursor: not-allowed; transform: none; }
 
-button:hover {
-    transform: translateY(-2px);
-}
+#save-all-btn { background-color: var(--success-green); color: white; }
+#save-all-btn:hover { background-color: #218838; }
 
-#preview-btn {
+.save-btn-individual {
     background-color: var(--accent-blue);
     color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
 }
-#preview-btn:hover {
-    background-color: #0056A0;
-}
-
-#save-btn {
-    background-color: var(--success-green);
-    color: white;
-    margin-left: auto;
-}
-#save-btn:hover {
-    background-color: #218838;
-}
-#save-btn:disabled {
-    background-color: var(--disabled-gray);
-    cursor: not-allowed;
-    transform: none;
-}
+.save-btn-individual:hover { background-color: #0056A0; }
 
 /* Table Styles */
+#table-container { overflow-x: auto; }
 .episode-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 1rem;
     font-size: 0.9em;
 }
+.episode-table th, .episode-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.episode-table th { background-color: #F1F3F5; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 1rem 0.5rem; }
 
-.episode-table th, .episode-table td {
-    padding: 0.5rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: top;
-}
-
-.episode-table th {
-    background-color: #F1F3F5;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 1rem 0.5rem;
-}
-
-/* Editable Field Styles */
-.editable-input {
-    width: 95%;
-    padding: 0.5rem;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    font: inherit;
-    background-color: transparent;
-}
-.editable-input:focus {
+/* Editable Cell Styles */
+td[contenteditable="true"] {
+    background-color: var(--editable-bg);
     outline-color: var(--accent-blue);
-    background-color: #fff;
-    border-color: var(--accent-blue);
+    padding: 0.75rem;
 }
-.editable-input.pending {
-    background-color: var(--editable-bg);
+td[contenteditable="true"]:focus {
+    box-shadow: inset 0 0 0 2px var(--accent-blue);
+    background-color: var(--light-text);
 }
 
-/* Quill Rich Text Editor Styles */
-.quill-editor-container {
-    border: 1px solid transparent;
-    border-radius: 4px;
-}
-.quill-editor-container.pending {
-    background-color: var(--editable-bg);
-}
-.quill-editor-container .ql-toolbar { display: none; border-bottom: 1px solid #ccc !important; }
+/* Quill Editor Specific Styles */
+.quill-editor-container { border: 2px solid var(--editable-bg); border-radius: 4px; }
 .quill-editor-container .ql-container { border: none !important; font: inherit !important; }
-.quill-editor-container .ql-editor { padding: 8px !important; min-height: 40px; }
-.quill-editor-container.focused { border-color: var(--accent-blue); background-color: #fff; }
-.quill-editor-container.focused .ql-toolbar { display: block; }
+.quill-editor-container .ql-editor { padding: 8px !important; min-height: 50px; }
+.quill-editor-container:focus-within { border-color: var(--accent-blue); background-color: #fff; }
+.quill-editor-container .ql-toolbar { display: none; }
+.quill-editor-container:focus-within .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
