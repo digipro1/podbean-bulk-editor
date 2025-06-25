@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podbean Bulk Editor</title>
-    
     <!-- Quill.js Rich Text Editor Library -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,38 +20,19 @@
         
         <div id="editor-container" style="display: none;">
             
-            <div id="editor-controls">
-                <div class="control-group">
-                    <label for="field-select">Field to Edit</label>
-                    <select id="field-select">
-                        <option value="title" selected>Title</option>
-                        <option value="content">Description</option>
-                        <option value="season_no">Season No.</option>
-                        <option value="episode_no">Episode No.</option>
-                        <option value="author">Author</option>
-                        <option value="summary">Summary</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label for="find-input">Find Text</label>
-                    <input type="text" id="find-input" placeholder="Text to find...">
-                </div>
-                 <div class="control-group">
-                    <label for="replace-input">Replace With</label>
-                    <input type="text" id="replace-input" placeholder="Text to replace with...">
-                </div>
-                <button id="preview-btn">Preview Changes</button>
-                <button id="save-btn" disabled>Save Changes</button>
+            <!-- Actions Bar (replaces the old controls) -->
+            <div id="actions-container">
+                <button id="save-all-btn" disabled>Save All Changes</button>
             </div>
             
             <h2>Your Episodes</h2>
-            <div id="episode-list">
-                <!-- The editable episode grid will be rendered here by JavaScript -->
+            <div id="table-container">
+                 <!-- The editable episode grid will be rendered here by JavaScript -->
             </div>
         </div>
     </main>
     
-    <!-- Quill.js script (must be before our main script) -->
+    <!-- Quill.js and main application scripts -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="script.js"></script>
 </body>
