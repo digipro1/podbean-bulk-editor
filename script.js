@@ -1,12 +1,13 @@
-// script.js - Final Version: Corrects data types and ensures required fields.
+// script.js - Final Version: Ensures all required fields and correct data types.
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {};
+let pendingChanges = {}; // This will now just be a flag to enable the save button
 let quillInstances = {}; 
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Netlify Identity Event Listeners ---
     netlifyIdentity.on('init', user => {
         currentUser = user;
         netlifyIdentity.renderPlaceholder('#auth-container');
@@ -124,7 +125,7 @@ function renderEpisodes(episodes) {
             input.className = 'editable-input';
             input.value = value || '';
             input.dataset.field = fieldName;
-            input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
+            input.addEventListener('input', () => trackChange(episode.id));
             cell.appendChild(input);
         };
         const createSelectCell = (value, fieldName, options) => {
@@ -139,7 +140,7 @@ function renderEpisodes(episodes) {
                 if (String(val) === String(value)) option.selected = true;
                 select.appendChild(option);
             }
-            select.addEventListener('change', () => trackChange(episode.id, fieldName, select.value));
+            select.addEventListener('change', () => trackChange(episode.id));
             cell.appendChild(select);
         };
         const createTextareaCell = (value, fieldName) => {
@@ -148,7 +149,7 @@ function renderEpisodes(episodes) {
             textarea.className = 'editable-textarea';
             textarea.dataset.field = fieldName;
             textarea.value = value || '';
-            textarea.addEventListener('input', () => trackChange(episode.id, fieldName, textarea.value));
+            textarea.addEventListener('input', () => trackChange(episode.id));
             cell.appendChild(textarea);
         };
         
@@ -184,64 +185,73 @@ function renderEpisodes(episodes) {
             });
             quill.root.innerHTML = episode.content || '';
             quillInstances[episode.id] = quill;
-            quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
+            quill.on('text-change', () => trackChange(episode.id));
         }
     });
 }
 
-function trackChange(episodeId, field, value) {
+// Simplified change tracking - just flags that a row is dirty.
+function trackChange(episodeId) {
     if (!pendingChanges[episodeId]) {
-        pendingChanges[episodeId] = {};
+        pendingChanges[episodeId] = true; // Mark as changed
     }
-    pendingChanges[episodeId][field] = value;
     document.getElementById('save-all-btn').disabled = false;
     const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
     if(row) row.classList.add('changed-row');
 }
 
 /**
- * FINALIZED: Gathers changed data and ensures required fields and data types are correct.
+ * FINALIZED: Gathers ALL data from a row and ensures correct data types.
  * @param {string} episodeId - The ID of the episode.
- * @returns {object} An object containing the data to be sent for update.
+ * @returns {object} An object containing all fields for update.
  */
 function getDataToSave(episodeId) {
-    const changes = pendingChanges[episodeId] || {};
     const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
+    const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
+    if (!originalEpisode || !row) return null;
 
-    if (!originalEpisode) {
-        console.error("Could not find original episode data for ID:", episodeId);
-        return null;
-    }
-    
-    // Start with a base of required fields from the original data
-    const updates = { 
-        title: originalEpisode.title,
-        status: originalEpisode.status,
+    const updates = {
+        status: originalEpisode.status // Always include original status
     };
 
-    // Merge the tracked changes on top of the base.
-    Object.assign(updates, changes);
+    // Gather all fields from the row
+    row.querySelectorAll('[data-field]').forEach(input => {
+        updates[input.dataset.field] = input.value;
+    });
 
-    // --- CRITICAL FIX: Sanitize data types before sending ---
-    for (const key in updates) {
-        if (key === 'content_explicit') {
-            // Ensure this is a string "true" or "false"
-            updates[key] = String(updates[key] === 'true' || updates[key] === true);
-        } else if ((key === 'season_no' || key === 'episode_no') && (updates[key] === '' || updates[key] === null)) {
-            // Remove empty number fields so they aren't sent
-            delete updates[key];
-        }
+    // Get content from Quill editor
+    const quill = quillInstances[episodeId];
+    if (quill) {
+        updates.content = quill.root.innerHTML;
     }
     
+    // --- CRITICAL FIX: Sanitize data types before sending ---
+    // Ensure title is present
+    if (!updates.title) {
+        updates.title = originalEpisode.title;
+    }
+
+    // Ensure content_explicit is a STRING "true" or "false"
+    if ('content_explicit' in updates) {
+        updates.content_explicit = String(updates.content_explicit === 'true');
+    }
+
+    // Remove empty number fields
+    if (updates.season_no === '' || updates.season_no === null) {
+        delete updates.season_no;
+    }
+    if (updates.episode_no === '' || updates.episode_no === null) {
+        delete updates.episode_no;
+    }
+
     return updates;
 }
 
 
 async function handleIndividualSave(episodeId) {
     const updates = getDataToSave(episodeId);
-    
-    if (!updates || !pendingChanges[episodeId] || Object.keys(pendingChanges[episodeId]).length === 0) {
-        alert('No new changes to save for this episode.');
+    if (!updates) {
+        alert('Could not find data to save.');
         return;
     }
     
@@ -259,7 +269,7 @@ async function handleIndividualSave(episodeId) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error_description || 'Save failed');
+            throw new Error(errorData.error_description || `Save failed: ${errorData.error || 'Unknown error'}`);
         }
 
         saveButton.textContent = 'Saved!';
