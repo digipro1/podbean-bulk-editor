@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Podbean Bulk Editor</title>
     
-    <!-- Quill.js Rich Text Editor -->
+    <!-- Quill.js Rich Text Editor Library -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
@@ -27,7 +27,10 @@
                     <select id="field-select">
                         <option value="title" selected>Title</option>
                         <option value="content">Description</option>
-                        <!-- Add other text fields here as needed -->
+                        <option value="season_no">Season No.</option>
+                        <option value="episode_no">Episode No.</option>
+                        <option value="author">Author</option>
+                        <option value="summary">Summary</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -44,12 +47,12 @@
             
             <h2>Your Episodes</h2>
             <div id="episode-list">
-                <!-- The episode table will be rendered here by JavaScript -->
+                <!-- The editable episode grid will be rendered here by JavaScript -->
             </div>
         </div>
     </main>
     
-    <!-- Quill.js script -->
+    <!-- Quill.js script (must be before our main script) -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="script.js"></script>
 </body>
