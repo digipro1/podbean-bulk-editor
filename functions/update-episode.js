@@ -1,4 +1,5 @@
-// functions/update-episode.js (Secured)
+// functions/update-episode.js - Corrected to use application/x-www-form-urlencoded
+
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
@@ -19,16 +20,23 @@ exports.handler = async function(event, context) {
         }
 
         const podbeanApiUrl = `https://api.podbean.com/v1/episodes/${episodeId}`;
+
+        // --- CRITICAL FIX: Create a URLSearchParams object ---
+        // This will format the body as application/x-www-form-urlencoded
         const params = new URLSearchParams();
         params.append('access_token', accessToken);
 
+        // Add all the fields from our 'updates' object to the request body
         for (const key in updates) {
-            params.append(key, updates[key]);
+            // Ensure we don't send null/undefined values
+            if (updates[key] !== null && updates[key] !== undefined) {
+                params.append(key, updates[key]);
+            }
         }
         
         const response = await fetch(podbeanApiUrl, { 
             method: 'POST', 
-            body: params 
+            body: params // The body is now correctly formatted
         });
 
         const data = await response.json();
