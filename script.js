@@ -1,8 +1,8 @@
-// script.js - Final Version with Episode Type field removed
+// script.js - Final Version: Tracks and submits only changed fields.
 
 // --- Global State ---
 let allEpisodes = [];
-let pendingChanges = {};
+let pendingChanges = {}; // E.g., { "episodeId123": { title: "New Title" } }
 let quillInstances = {}; 
 let currentUser = null;
 
@@ -118,8 +118,8 @@ function renderEpisodes(episodes) {
     table.className = 'episode-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    // --- UPDATED: Removed 'Episode Type' from headers ---
-    const headers = ['Title', 'Description', 'Season', 'Episode', 'Content Rating', 'Summary', 'Author', 'Action'];
+    // Re-added 'Episode Type' to headers, but it will be read-only
+    const headers = ['Title', 'Description', 'Season', 'Episode', 'Episode Type', 'Content Rating', 'Summary', 'Author', 'Action'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -138,15 +138,13 @@ function renderEpisodes(episodes) {
             input.type = type;
             input.className = 'editable-input';
             input.value = value || '';
-            input.dataset.field = fieldName;
-            input.placeholder = `Enter ${fieldName.replace('_', ' ')}`;
+            input.addEventListener('input', () => trackChange(episode.id, fieldName, input.value));
             cell.appendChild(input);
         };
         const createSelectCell = (value, fieldName, options) => {
             const cell = row.insertCell();
             const select = document.createElement('select');
             select.className = 'editable-select';
-            select.dataset.field = fieldName;
             for (const [text, val] of Object.entries(options)) {
                 const option = document.createElement('option');
                 option.value = val;
@@ -154,16 +152,16 @@ function renderEpisodes(episodes) {
                 if (String(val) === String(value)) option.selected = true;
                 select.appendChild(option);
             }
+            select.addEventListener('change', () => trackChange(episode.id, fieldName, select.value));
             cell.appendChild(select);
         };
         const createTextareaCell = (value, fieldName) => {
             const cell = row.insertCell();
             const textarea = document.createElement('textarea');
             textarea.className = 'editable-textarea';
-            textarea.dataset.field = fieldName;
             textarea.value = value || '';
-            textarea.placeholder = 'Enter summary...';
             textarea.rows = 2;
+            textarea.addEventListener('input', () => trackChange(episode.id, fieldName, textarea.value));
             cell.appendChild(textarea);
         };
         
@@ -176,7 +174,11 @@ function renderEpisodes(episodes) {
 
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
-        // --- UPDATED: Removed the line that creates the 'Episode Type' dropdown ---
+        
+        // Episode Type is now read-only text
+        const typeCell = row.insertCell();
+        typeCell.textContent = episode.episode_type || 'full';
+
         createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
@@ -200,47 +202,32 @@ function renderEpisodes(episodes) {
             });
             quill.root.innerHTML = episode.content || '';
             quillInstances[episode.id] = quill;
+            quill.on('text-change', () => trackChange(episode.id, 'content', quill.root.innerHTML));
         }
     });
 }
 
-
-function getRowData(episodeId) {
-    const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
-    if (!row) return null;
-
-    const rowData = {};
-    row.querySelectorAll('[data-field]').forEach(input => {
-        const field = input.dataset.field;
-        let value = input.value;
-
-        if (field === 'content_explicit') {
-            rowData[field] = (value === 'true');
-        } else if ((field === 'season_no' || field === 'episode_no') && value === '') {
-            return; 
-        } else {
-            rowData[field] = value;
-        }
-    });
-
-    const quill = quillInstances[episodeId];
-    if (quill) {
-        rowData.content = quill.root.innerHTML;
+function trackChange(episodeId, field, value) {
+    if (!pendingChanges[episodeId]) {
+        pendingChanges[episodeId] = {};
+    }
+    // Sanitize number fields before storing
+    if ((field === 'season_no' || field === 'episode_no') && value === '') {
+        // If user clears the field, we remove it from changes to avoid sending empty string
+        delete pendingChanges[episodeId][field];
+    } else {
+        pendingChanges[episodeId][field] = value;
     }
     
-    if (!rowData.title) {
-        const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
-        rowData.title = originalEpisode.title;
-    }
-
-    return rowData;
+    document.getElementById('save-all-btn').disabled = false;
+    const row = document.querySelector(`tr[data-episode-id="${episodeId}"]`);
+    if(row) row.classList.add('changed-row');
 }
 
-
 async function handleIndividualSave(episodeId) {
-    const updates = getRowData(episodeId);
-    if (!updates) {
-        alert('Could not find row data to save.');
+    const updates = pendingChanges[episodeId];
+    if (!updates || Object.keys(updates).length === 0) {
+        alert('No changes to save for this episode.');
         return;
     }
     
@@ -262,7 +249,13 @@ async function handleIndividualSave(episodeId) {
         }
 
         saveButton.textContent = 'Saved!';
+        row.classList.remove('changed-row');
+        delete pendingChanges[episodeId];
         setTimeout(() => { saveButton.textContent = 'Save'; saveButton.disabled = false; }, 2000);
+
+        if (Object.keys(pendingChanges).length === 0) {
+            document.getElementById('save-all-btn').disabled = true;
+        }
 
     } catch (error) {
         alert(`Error saving episode: ${error.message}`);
@@ -273,19 +266,17 @@ async function handleIndividualSave(episodeId) {
 
 async function handleSaveAll() {
     const saveAllBtn = document.getElementById('save-all-btn');
-    const allRows = document.querySelectorAll('.episode-table tbody tr');
+    const changedEpisodeIds = Object.keys(pendingChanges);
+    if (changedEpisodeIds.length === 0) { alert('No changes to save.'); return; }
 
-    if (allRows.length === 0) { alert('No episodes to save.'); return; }
-    
     saveAllBtn.textContent = 'Saving All...';
     saveAllBtn.disabled = true;
     let successCount = 0;
-    const totalChanges = allRows.length;
+    const totalChanges = changedEpisodeIds.length;
 
     for (let i = 0; i < totalChanges; i++) {
-        const row = allRows[i];
-        const episodeId = row.dataset.episodeId;
-        const updates = getRowData(episodeId);
+        const episodeId = changedEpisodeIds[i];
+        const updates = pendingChanges[episodeId];
         
         saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
         
@@ -303,6 +294,6 @@ async function handleSaveAll() {
     
     alert(`Successfully saved ${successCount} of ${totalChanges} episodes.`);
     saveAllBtn.textContent = 'Save All Changes';
-    saveAllBtn.disabled = false;
-    await fetchEpisodes();
+    saveAllBtn.disabled = true;
+    await fetchEpisodes(); // Refresh all data to show latest state
 }
