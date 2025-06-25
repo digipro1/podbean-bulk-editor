@@ -1,4 +1,4 @@
-// script.js - Final Version with Correct Auth Headers
+// script.js - Final Version with Netlify Identity and Quill Fix
 
 // --- Global State ---
 let allEpisodes = [];
@@ -181,7 +181,7 @@ function renderEpisodes(episodes) {
         createInputCell(episode.season_no, 'season_no', 'number');
         createInputCell(episode.episode_no, 'episode_no', 'number');
         createSelectCell(episode.episode_type, 'episode_type', { 'Full': 'full', 'Trailer': 'trailer', 'Bonus': 'bonus' });
-        createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': false, 'Explicit': true });
+        createSelectCell(episode.content_explicit, 'content_explicit', { 'Clean': 'false', 'Explicit': 'true' });
         createTextareaCell(episode.summary, 'summary');
         createInputCell(episode.author, 'author');
 
