@@ -1,4 +1,4 @@
-// script.js - Final Version with Netlify Identity and Quill Fix
+// script.js - Final Version with Correct Auth Headers
 
 // --- Global State ---
 let allEpisodes = [];
@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Check if a user is already logged in when the page loads
-    if (netlifyIdentity.currentUser()) {
+    const user = netlifyIdentity.currentUser();
+    if (user) {
+        currentUser = user;
         initializeApp();
     }
 });
@@ -36,6 +38,22 @@ function setupEventListeners() {
         saveAllBtn.addEventListener('click', handleSaveAll);
     }
 }
+
+// --- NEW HELPER FUNCTION FOR AUTHENTICATED FETCH ---
+async function fetchWithAuth(url, options = {}) {
+    const user = netlifyIdentity.currentUser();
+    if (!user) {
+        throw new Error("User not logged in.");
+    }
+
+    const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${user.token.access_token}`
+    };
+
+    return fetch(url, { ...options, headers });
+}
+
 
 async function initializeApp() {
     const appContainer = document.getElementById('app-container');
@@ -49,7 +67,8 @@ async function initializeApp() {
         statusMessage.style.display = 'block';
         editorContainer.style.display = 'none';
 
-        const response = await fetch('/api/get-token');
+        // --- UPDATED: Use the new authenticated fetch helper ---
+        const response = await fetchWithAuth('/api/get-token');
         if (!response.ok) {
              const errorData = await response.json();
              throw new Error(errorData.error || 'Could not get Podbean token. Please re-login.');
@@ -78,7 +97,9 @@ async function fetchEpisodes() {
     const limit = 100;
     let hasMore = true;
     while(hasMore) {
-        const response = await fetch(`/api/get-episodes?access_token=${window.podbeanAccessToken}&offset=${offset}&limit=${limit}`);
+        // --- UPDATED: Use the authenticated fetch helper ---
+        // Note: We don't need to pass the token to the function itself, as it's handled by fetchWithAuth
+        const response = await fetchWithAuth(`/api/get-episodes?access_token=${window.podbeanAccessToken}&offset=${offset}&limit=${limit}`);
         if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error_description || 'Failed to fetch episodes.'); }
         const data = await response.json();
         if (data.episodes && data.episodes.length > 0) { fetchedEpisodes.push(...data.episodes); offset += data.episodes.length; } else { hasMore = false; }
@@ -205,7 +226,8 @@ async function handleIndividualSave(episodeId) {
     saveButton.textContent = 'Saving...';
     saveButton.disabled = true;
     try {
-        const response = await fetch('/api/update-episode', {
+        // --- UPDATED: Use the authenticated fetch helper ---
+        const response = await fetchWithAuth('/api/update-episode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ episodeId, updates: changes, accessToken: window.podbeanAccessToken }),
@@ -238,7 +260,8 @@ async function handleSaveAll() {
         const updates = pendingChanges[episodeId];
         saveAllBtn.textContent = `Saving ${i + 1} of ${totalChanges}...`;
         try {
-            const response = await fetch('/api/update-episode', {
+            // --- UPDATED: Use the authenticated fetch helper ---
+            const response = await fetchWithAuth('/api/update-episode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ episodeId, updates, accessToken: window.podbeanAccessToken }),
