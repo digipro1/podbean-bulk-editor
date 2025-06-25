@@ -1,4 +1,4 @@
-// script.js - Final Version: Includes 'status' field in all save requests.
+// script.js - Final Version: Always includes 'title' and 'status' in save requests.
 
 // --- Global State ---
 let allEpisodes = [];
@@ -223,9 +223,17 @@ function getChangedData(episodeId) {
     const changes = pendingChanges[episodeId];
     if (!changes) return null;
 
-    // --- NEW LOGIC: Always include the original status in the update payload ---
     const originalEpisode = allEpisodes.find(ep => ep.id === episodeId);
-    const updates = { ...changes, status: originalEpisode.status };
+    
+    // --- NEW LOGIC: Always include title and status in the update payload ---
+    const updates = { 
+        title: originalEpisode.title,
+        status: originalEpisode.status,
+        ...changes 
+    };
+
+    // If the title was part of the changes, it will be correctly overwritten above.
+    // If not, the original title will be included.
 
     // Sanitize boolean and number fields
     for (const key in updates) {
@@ -243,8 +251,9 @@ function getChangedData(episodeId) {
 
 async function handleIndividualSave(episodeId) {
     const updates = getChangedData(episodeId);
-    if (!updates || Object.keys(updates).length <= 1) { // <=1 because we always add status
-        alert('No changes to save for this episode.');
+    // There will always be at least title and status, so check if there are more keys than that.
+    if (!updates || Object.keys(updates).length <= 2) {
+        alert('No new changes to save for this episode.');
         return;
     }
     
