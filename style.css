@@ -116,17 +116,20 @@ button:disabled { background-color: var(--disabled-gray); color: white; cursor: 
 .quill-editor-container:focus-within, .quill-placeholder:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px var(--accent-blue); }
 .quill-editor-container .ql-toolbar, .quill-placeholder .ql-toolbar { display: block; border-bottom: 1px solid #ccc; }
 
-#auth-container button {
-    background: none;
-    border: none;
-    color: var(--light-text);
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0.5rem;
+[data-netlify-identity-button] button {
+    background: none !important;
+    border: none !important;
+    color: var(--light-text) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    padding: 0.5rem !important;
+    text-decoration: none !important;
+    text-transform: none !important;
 }
-#auth-container button:hover {
-    text-decoration: underline;
-    transform: none;
+
+[data-netlify-identity-button] button:hover {
+    text-decoration: underline !important;
+    transform: none !important;
 }
